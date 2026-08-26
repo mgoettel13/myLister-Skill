@@ -1,6 +1,6 @@
-# Lister Skill
+# MyLister.dev Skill
 
-OpenClaw skill for natural language control of [Lister.ai](https://lister.ai) task management.
+Agent skill for natural language control of [MyLister.dev](https://app.mylister.dev) task management.
 
 ## Setup
 
@@ -15,6 +15,71 @@ npm run build
 export LISTER_BASE_URL="https://api.mylister.dev"
 export LISTER_API_KEY="your-api-key-here"
 ```
+
+The API key is read from the environment and sent as `X-API-Key`. Never commit an API key to this repository or place it in a prompt. On Windows PowerShell, use:
+
+Get your key in [MyLister.dev Settings](https://app.mylister.dev/settings) under the **API Key** tab.
+
+```powershell
+$env:LISTER_BASE_URL = "https://api.mylister.dev"
+$env:LISTER_API_KEY = "your-api-key-here"
+```
+
+## Install In Agent Hosts
+
+This repository is an [Agent Skills-compatible](https://agentskills.io/) skill. The root `SKILL.md` contains the agent instructions, while the TypeScript client in `dist/` performs the API calls. Because `dist/` is built locally and is not committed, use the clone/build flow below for this repository.
+
+### OpenClaw
+
+Install the built skill into the shared OpenClaw skills directory:
+
+```bash
+git clone https://github.com/mgoettel13/myList-Skill.git /tmp/myList-Skill
+cd /tmp/myList-Skill
+npm ci
+openclaw skills install . --as lister --global
+```
+
+For a workspace-only install, omit `--global`. Start a new OpenClaw session, then ask naturally, for example: `Add "Call Mama" to my today list`.
+
+OpenClaw also supports `openclaw skills install git:mgoettel13/myList-Skill@main`, but a direct Git skill install does not run this repository's build step. Build first, then install the local directory as shown above. See the [OpenClaw skills documentation](https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md).
+
+### Hermes
+
+Hermes keeps installed skills in `~/.hermes/skills/`. Clone and build the skill there:
+
+```bash
+git clone https://github.com/mgoettel13/myList-Skill.git ~/.hermes/skills/lister
+cd ~/.hermes/skills/lister
+npm ci
+hermes skills list
+```
+
+Start a new Hermes session and use `/lister` or describe the task normally. Hermes can also install a standalone `SKILL.md` URL with `hermes skills install`, but the clone/build flow is required here so the Node API client is available. See the [Hermes skills guide](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills) and [CLI reference](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/cli-commands.md).
+
+### Codex
+
+For the current repository, install it as a **standalone Codex skill**:
+
+```bash
+git clone https://github.com/mgoettel13/myList-Skill.git "$CODEX_HOME/skills/lister"
+cd "$CODEX_HOME/skills/lister"
+npm ci
+```
+
+If `CODEX_HOME` is not set, use the Codex skills directory shown by your installation, commonly `~/.codex/skills/lister`. Restart Codex or start a new session, set `LISTER_API_KEY` in the environment, and ask for a MyLister action. Codex can then load the root `SKILL.md` and run the bundled CLI.
+
+### Claude Code
+
+Claude Code supports project skills in `.claude/skills/` and personal skills in `~/.claude/skills/`. Install it for all projects with:
+
+```bash
+git clone https://github.com/mgoettel13/myList-Skill.git ~/.claude/skills/lister
+cd ~/.claude/skills/lister
+npm ci
+```
+
+Or clone it into `<your-project>/.claude/skills/lister` for that project only. Start Claude Code from the relevant project and ask naturally, or invoke `/lister`. See the [Claude Code skills documentation](https://code.claude.com/docs/en/slash-commands).
 
 ## Usage
 
@@ -65,6 +130,7 @@ console.log(response);
 
 ## API
 
+- **API documentation:** [MyLister API docs](https://api.mylister.dev/docs)
 - **Base URL:** `https://api.mylister.dev`
 - **Auth:** API key via `X-API-Key`
 - **Endpoints:** `/v1/lists`, `/v1/items`, `/v1/items/priority`, item/note comments, item exports, note reorder, attachments, media uploads, file URLs, health, and version
