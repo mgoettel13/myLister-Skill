@@ -1,3 +1,8 @@
+---
+name: lister
+description: Natural language task and list management for MyLister through its public API.
+---
+
 # Lister — Natural Language Task Management
 
 **Skill name:** `lister`
@@ -25,6 +30,11 @@ Use this skill whenever the user wants to manage tasks, to-do items, or lists us
 - **"email list"** — email a list to someone
 - **"export priority"** — export all priority items
 - **"email priority"** — email priority items to someone
+- **"export item"** — export one item as JSON or HTML
+- **"email item"** — email one item
+- **"attachment"** — upload or remove an item attachment
+- **"upload image/voice"** — upload media and optionally associate it with a list or item
+- **"API health/version"** — inspect the deployed API status
 
 ## Configuration
 
@@ -70,6 +80,8 @@ Add a new task to a specific list. Use quotes for the task text. Mark items as p
 **Keywords:** `add`, `create`, `new`, `put`
 
 **Create payload support:** item creation can include inline `notes`, inline `comments`, `reminder`, and project metadata (`startDate`, `endDate`, `durationMinutes`, `assignedTo`) when those phrases are present.
+
+Project metadata is accepted by the API for project lists. If no assignee is supplied, the API assigns the item to the project owner. An explicit assignee must be the owner or an edit/admin collaborator.
 
 ### 2. Get / List Items
 View all items in a specific list, or show all lists if no list name is given.
@@ -152,6 +164,20 @@ Attach a note to an item.
 
 **Keywords:** `note`, `memo`
 
+### 8c. Attachments and Media
+Upload files directly from the local filesystem, or remove an existing item attachment/image.
+
+| Pattern | Example |
+|---------|---------|
+| `attach file [path] to item [id]` | `attach file "C:\\docs\\plan.pdf" to item 123` |
+| `delete attachment [attachment_id] from item [id]` | `delete attachment 456 from item 123` |
+| `upload image [path] to item [id]` | `upload image "C:\\images\\brief.png" to item 123` |
+| `upload voice [path] to item [id] transcribe` | `upload voice "C:\\audio\\note.webm" to item 123 transcribe` |
+| `remove image from item [id]` | `remove image from item 123` |
+| `get file URL for [file_key] expires [seconds]` | `get file URL for attachments/lists/... expires 3600` |
+
+Uploads use multipart form data. The skill keeps the API key header but deliberately lets `fetch` set the multipart boundary.
+
 ### 8a. Item Comments
 Add, view, update, or delete comments on an item. This is useful for shared items.
 
@@ -184,6 +210,22 @@ Export a list to JSON or HTML format.
 | `export my [list] list with archived` | `export my today list with archived` |
 
 **Keywords:** `export`, `as json`, `as html`, `theme`, `with archived`
+
+### 9a. Export Item
+Export one item as JSON or HTML.
+
+| Pattern | Example |
+|---------|---------|
+| `export item [id]` | `export item 123` |
+| `export item [id] as html` | `export item 123 as html theme dark` |
+
+### 10a. Email Item
+Email one item as an HTML export.
+
+| Pattern | Example |
+|---------|---------|
+| `email item [id]` | `email item 123` |
+| `email item [id] to [email]` | `email item 123 to user@example.com` |
 
 ### 10. Email List
 Email a list to yourself or someone else.
@@ -232,6 +274,7 @@ Create a new list.
 **Keywords:** `create`, `make`, `add`
 
 **List types:** `standard`, `notebook`, and `project` are supported. `journal` maps to `notebook`.
+An existing list can change type with `update my [list] list to project` (or `notebook`/`standard`).
 
 ### 14. Delete List
 Delete an existing list (all items are permanently removed).
@@ -240,10 +283,13 @@ Delete an existing list (all items are permanently removed).
 |---------|---------|
 | `delete my [list] list` | `delete my old projects list` |
 | `delete list [name]` | `delete list Archive` |
+| `delete my [list] list permanently` | `delete my Archive list permanently` |
 
 **Keywords:** `delete`
 
 **Note:** List name matching is case-insensitive.
+
+Permanent lists require the explicit `permanently` or `force` qualifier; the API sends this as `?force=true`.
 
 ### 15. Search
 Search across all lists and items.
@@ -399,6 +445,21 @@ View detailed information about a specific list.
 
 **Keywords:** `list details`, `list info`
 
+### 30. Reorder Notes
+Set the order of notes embedded in an item.
+
+| Pattern | Example |
+|---------|---------|
+| `reorder notes for item [id] in order: [note IDs]` | `reorder notes for item 123 in order: 456, 789` |
+
+### 31. API Status
+Check the deployed public API without touching list data.
+
+| Pattern | Example |
+|---------|---------|
+| `check API health` | `check API health` |
+| `show API version` | `show API version` |
+
 ---
 
 ## API Reference
@@ -411,7 +472,7 @@ The skill uses the **Public API (`/v1/`)** endpoints on `https://api.mylister.de
 | \`POST\` | \`/v1/lists\` | Create a new list (`standard`, `notebook`, or `project`) |
 | \`GET\` | \`/v1/lists/{id}\` | Get list details |
 | \`PUT\` | \`/v1/lists/{id}\` | Update a list (name, description, etc.) |
-| \`DELETE\` | \`/v1/lists/{id}\` | Delete a list |
+| \`DELETE\` | \`/v1/lists/{id}?force=true\` | Delete a list; force is required for permanent lists |
 | \`PUT\` | \`/v1/lists/{id}/archive\` | Archive/unarchive a list |
 | \`PUT\` | \`/v1/lists/reorder\` | Reorder lists |
 | \`GET\` | \`/v1/lists/summary\` | Get lists summary with counts |
@@ -429,6 +490,11 @@ The skill uses the **Public API (`/v1/`)** endpoints on `https://api.mylister.de
 | \`GET\` | \`/v1/items/{id}\` | Get item details |
 | \`PATCH\` | \`/v1/items/{id}\` | Update an item (text, status, priority, archived, reminder) |
 | \`DELETE\` | \`/v1/items/{id}\` | Delete an item |
+| \`POST\` | \`/v1/items/{id}/export\` | Export one item (JSON/HTML) |
+| \`POST\` | \`/v1/items/{id}/export/email\` | Email one item |
+| \`POST\` | \`/v1/items/{id}/attachments\` | Upload an item attachment (multipart) |
+| \`DELETE\` | \`/v1/items/{id}/attachments/{attachment_id}\` | Delete an item attachment |
+| \`DELETE\` | \`/v1/items/{id}/image\` | Remove an item image |
 | \`POST\` | \`/v1/items/{id}/comments\` | Add an item comment |
 | \`GET\` | \`/v1/items/{id}/comments\` | Get item comments |
 | \`PUT\` | \`/v1/items/{id}/comments/{cid}\` | Update an item comment |
@@ -437,6 +503,7 @@ The skill uses the **Public API (`/v1/`)** endpoints on `https://api.mylister.de
 | \`POST\` | \`/v1/items/{id}/notes\` | Add a note to an item |
 | \`PUT\` | \`/v1/items/{id}/notes/{nid}\` | Update a note |
 | \`DELETE\` | \`/v1/items/{id}/notes/{nid}\` | Delete a note |
+| \`PUT\` | \`/v1/items/{id}/notes/reorder\` | Reorder notes |
 | \`PATCH\` | \`/v1/items/{id}/notes/{nid}/status\` | Update note status |
 | \`POST\` | \`/v1/items/{id}/notes/{nid}/comments\` | Add a note comment |
 | \`GET\` | \`/v1/items/{id}/notes/{nid}/comments\` | Get note comments |
@@ -446,10 +513,15 @@ The skill uses the **Public API (`/v1/`)** endpoints on `https://api.mylister.de
 | \`POST\` | \`/v1/items/priority/export\` | Export priority items (JSON/HTML) |
 | \`POST\` | \`/v1/items/priority/export/email\` | Email priority items |
 | \`GET\` | \`/v1/search\` | Search across all lists & items |
+| \`POST\` | \`/v1/upload/image\` | Upload an image (multipart) |
+| \`POST\` | \`/v1/upload/voice\` | Upload voice (multipart, optional transcription) |
+| \`GET\` | \`/v1/files/{file_key}/url\` | Generate a presigned file URL |
+| \`GET\` | \`/v1/health\` | Public API health |
+| \`GET\` | \`/v1/version\` | Deployed API version metadata |
 
 **Authentication:** API key via the `X-API-Key` header for all `/v1/` endpoints. Bearer tokens are not accepted on this public API surface.
 
-**Important:** Always use `/v1/` endpoints on `api.mylister.dev`. The skill validates JSON responses and reports redirects or non-JSON responses as API routing errors.
+**Important:** Always use `/v1/` endpoints on `api.mylister.dev`. Exports may return JSON or HTML; uploads/status responses are JSON. The skill validates the response host and content type accordingly.
 
 ## Response Format
 
@@ -492,7 +564,7 @@ lister-skill/
 
 1. **Always quote item text** — the parser extracts text between quotes (`" "` or `' '`). If the user doesn't use quotes, ask them to.
 2. **List names are case-insensitive** — `today`, `Today`, and `TODAY` all match the same list.
-3. **IDs are now consistent** — The API returns `id` (not `_id`) across all resources: lists, items, notes, and users. IDs are 24-character hex strings, extracted from patterns like `item 6a1d5a16...`, `id 6a1d5a16...`, or `#6a1d5a16...`.
+3. **IDs are 24-character hex strings in the public API** (the parser also accepts numeric IDs for compatibility). Responses may include populated creator/assignee data on shared and project items.
 4. **The skill auto-resolves list names to IDs** — users don't need to know internal list IDs; they use friendly names.
 5. **If the list doesn't exist**, the skill will report an error — it does **not** auto-create lists. The user must create the list first or use an existing one.
 6. **Archived lists** are automatically included in list name resolution — if a list name isn't found in active lists, the skill searches archived lists too.
@@ -509,3 +581,6 @@ lister-skill/
 17. **Project lists** are created by passing `type: "project"` when the user asks for a project list.
 18. **Item creation with notes/comments** uses the `notes` and `comments` arrays in the initial `/v1/lists/{id}/items` request when the user says `with note "..."` or `with comment "..."`.
 19. **Project item metadata** is sent in the `project` object with supported fields `startDate`, `endDate`, `durationMinutes`, and `assignedTo`. The API validates `assignedTo`; use the owner or an edit/admin collaborator.
+20. **Project items are intentionally excluded from the priority-items surface** by the API; query the project list directly for project work.
+21. **Archived item reads** use `GET /v1/lists/{id}/items?includeArchived=true`; the skill now forwards `with archived` for list item reads.
+22. **The deployed API exposes item exports, note reorder, attachments, media upload, presigned file URLs, health, and version routes** in addition to list/task CRUD.

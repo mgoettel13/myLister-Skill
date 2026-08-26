@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "description": "Natural language task management with Lister.ai",
   "main": "dist/index.js",
-  "commands": ["add", "get", "list", "mark", "remove", "update", "move", "note", "comment", "reminder", "project", "priority"]
+  "commands": ["add", "get", "list", "mark", "remove", "update", "move", "note", "comment", "reminder", "project", "priority", "export", "email", "attachment", "upload", "health", "version"]
 }

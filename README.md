@@ -51,16 +51,23 @@ console.log(response);
 | Add note | `note for item [id]: "text"` |
 | Item comments | `comment on item [id]: "text"` |
 | Note comments | `comment on note [note_id] for item [id]: "text"` |
+| Export item | `export item [id] as html` |
+| Email item | `email item [id] to user@example.com` |
+| Reorder notes | `reorder notes for item [id] in order: [note_id], [note_id]` |
+| Attach file | `attach file "C:\\docs\\plan.pdf" to item [id]` |
+| Upload media | `upload image "C:\\images\\brief.png" to item [id]` |
+| File URL | `get file URL for [file_key] expires 3600` |
 | Reminders | `add "task" to my today list reminder tomorrow at 9am` |
 | Notebook lists | `create a new list called Journal notebook` |
 | Project lists | `create a new project list called Website Launch` |
+| Change list type | `update my Launch list to project` |
 | Move completed | `move completed to bottom of my today list` |
 
 ## API
 
 - **Base URL:** `https://api.mylister.dev`
 - **Auth:** API key via `X-API-Key`
-- **Endpoints:** `/v1/lists`, `/v1/items`, `/v1/items/priority`, `/v1/items/{id}/comments`, `/v1/items/{id}/notes/{note_id}/comments`
+- **Endpoints:** `/v1/lists`, `/v1/items`, `/v1/items/priority`, item/note comments, item exports, note reorder, attachments, media uploads, file URLs, health, and version
 
 ## License
 

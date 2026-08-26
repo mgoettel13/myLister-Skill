@@ -7,6 +7,7 @@
 
 import { describe, it, mock, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { parseIntent as actualParseIntent } from './index.js';
 
 // ---------------------------------------------------------------------------
 // Re-import parseIntent via a helper wrapper so we can test it in isolation.
@@ -350,6 +351,26 @@ describe('configuration', () => {
     const source = await fs.readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
     assert.ok(source.includes("'X-API-Key': this.apiKey"));
     assert.ok(!source.includes("'Authorization':"));
+  });
+
+  it('covers the current v1 media and project routes', async () => {
+    const fs = await import('node:fs/promises');
+    const source = await fs.readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+    for (const endpoint of [
+      '/v1/items/${itemId}/export',
+      '/v1/items/${itemId}/export/email',
+      '/v1/items/${itemId}/notes/reorder',
+      '/v1/items/${itemId}/attachments',
+      '/v1/items/${itemId}/image',
+      '/v1/upload/image',
+      '/v1/upload/voice',
+      '/v1/files/',
+      '/v1/${kind}',
+    ]) {
+      assert.ok(source.includes(endpoint), `missing endpoint ${endpoint}`);
+    }
+    assert.ok(source.includes('getMultipartHeader'));
+    assert.ok(source.includes("'?force=true'"));
   });
 });
 
@@ -1441,6 +1462,58 @@ describe('parseIntent routing matrix', () => {
       }
     });
   }
+});
+
+describe('current API command coverage', () => {
+  it('routes item export and email commands', () => {
+    const exported = actualParseIntent('export item 123 as html');
+    assert.equal(exported.intent, 'export_item');
+    assert.equal(exported.entities.itemId, '123');
+    assert.equal(exported.entities.format, 'html');
+    const emailed = actualParseIntent('email item 123 to user@example.com');
+    assert.equal(emailed.intent, 'email_item');
+    assert.equal(emailed.entities.itemId, '123');
+    assert.equal(emailed.entities.email, 'user@example.com');
+  });
+
+  it('routes note reorder and archived item reads', () => {
+    assert.deepEqual(actualParseIntent('reorder notes for item 123 in order: 456, 789'), {
+      intent: 'reorder_notes',
+      entities: { itemId: '123', noteIds: ['456', '789'] },
+    });
+    const archived = actualParseIntent('get my Work list with archived');
+    assert.equal(archived.intent, 'get_items');
+    assert.equal(archived.entities.includeArchived, true);
+  });
+
+  it('routes attachments, media, file URLs, and API status checks', () => {
+    assert.deepEqual(actualParseIntent('attach file "plan.pdf" to item 123'), {
+      intent: 'upload_attachment',
+      entities: { filePath: 'plan.pdf', itemId: '123' },
+    });
+    const voice = actualParseIntent('upload voice "note.webm" to item 123 transcribe for 30 seconds');
+    assert.equal(voice.intent, 'upload_voice');
+    assert.equal(voice.entities.filePath, 'note.webm');
+    assert.equal(voice.entities.itemId, '123');
+    assert.equal(voice.entities.duration, 30);
+    assert.equal(voice.entities.transcribe, true);
+    const fileUrl = actualParseIntent('get file URL for attachments/lists/x expires 600');
+    assert.equal(fileUrl.intent, 'file_url');
+    assert.equal(fileUrl.entities.fileKey, 'attachments/lists/x');
+    assert.equal(fileUrl.entities.expiresIn, 600);
+    assert.equal(actualParseIntent('check API health').intent, 'api_health');
+    assert.equal(actualParseIntent('show API version').intent, 'api_version');
+  });
+
+  it('supports force deletion and project list type changes', () => {
+    assert.deepEqual(actualParseIntent('delete my Archive list permanently'), {
+      intent: 'delete_list',
+      entities: { listName: 'Archive', forceDelete: true },
+    });
+    const update = actualParseIntent('update my Launch list to project');
+    assert.equal(update.intent, 'update_list');
+    assert.equal(update.entities.listType, 'project');
+  });
 });
 
 // ---------------------------------------------------------------------------

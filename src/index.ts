@@ -14,7 +14,7 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import fetch from 'node-fetch';
+import fetch, { FormData, fileFrom } from 'node-fetch';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const CONFIG = {
@@ -34,6 +34,9 @@ type Intent = 'add_item' | 'get_items' | 'get_priority' | 'mark_done' |
               'update_list' | 'get_list' | 'get_item' |
               'add_item_comment' | 'get_item_comments' | 'update_item_comment' | 'delete_item_comment' |
               'add_note_comment' | 'get_note_comments' | 'update_note_comment' | 'delete_note_comment' |
+              'export_item' | 'email_item' | 'reorder_notes' |
+              'upload_attachment' | 'delete_attachment' | 'delete_item_image' |
+              'upload_image' | 'upload_voice' | 'file_url' | 'api_health' | 'api_version' |
               'unknown';
 
 interface ParsedIntent {
@@ -60,6 +63,15 @@ interface ParsedIntent {
     includeNotes?: boolean;
     listIds?: string[];
     itemIds?: string[];
+    noteIds?: string[];
+    attachmentId?: string;
+    filePath?: string;
+    fileKey?: string;
+    expiresIn?: number;
+    duration?: number;
+    transcribe?: boolean;
+    forceDelete?: boolean;
+    description?: string;
     listType?: 'standard' | 'notebook' | 'project';
     reminder?: any;
     notes?: string[];
@@ -180,7 +192,7 @@ function parseProjectData(input: string): ParsedIntent['entities']['project'] {
 }
 
 // ─── Intent Parser ───────────────────────────────────────────────────────────
-function parseIntent(input: string): ParsedIntent {
+export function parseIntent(input: string): ParsedIntent {
   const lower = input.toLowerCase();
 
   // Extract quoted text
@@ -200,10 +212,10 @@ function parseIntent(input: string): ParsedIntent {
 
   // Extract list name for delete: "delete my X list" or "delete list X"
   // Handles: "delete my work list" → work
-  const deleteListMatch = input.match(/^delete\s+(?:my\s+)?(.+?)\s+list$/i);
+  const deleteListMatch = input.match(/^delete\s+(?:my\s+)?(.+?)\s+list(?:\s+(?:force|permanently))?$/i);
   const deleteListName = deleteListMatch ? deleteListMatch[1].trim() : undefined;
   // Also handle "delete list X": extract X after "delete list "
-  const deleteListAltMatch = input.match(/^delete\s+list\s+(.+)$/i);
+  const deleteListAltMatch = input.match(/^delete\s+list\s+(.+?)(?:\s+(?:force|permanently))?$/i);
   const deleteListAltName = deleteListAltMatch ? deleteListAltMatch[1].trim() : undefined;
   const finalDeleteListName = deleteListName || deleteListAltName;
 
@@ -238,6 +250,67 @@ function parseIntent(input: string): ParsedIntent {
   const notes = extractTrailingQuotedValues(input, ['note', 'notes']);
   const comments = extractTrailingQuotedValues(input, ['comment', 'comments']);
   const project = parseProjectData(input);
+  const forceDelete = /\b(?:force|permanently)\b/i.test(input);
+
+  const uploadImageMatch = input.match(/^(?:upload|add)\s+image\s+(?:"([^"]+)"|'([^']+)'|(\S+))(?:\s+(?:to|for)\s+(?:item\s+)?([a-f0-9]{24}|\d+))?/i);
+  if (uploadImageMatch) {
+    return {
+      intent: 'upload_image',
+      entities: {
+        filePath: uploadImageMatch[1] ?? uploadImageMatch[2] ?? uploadImageMatch[3],
+        itemId: uploadImageMatch[4],
+        listName,
+      },
+    };
+  }
+
+  const uploadVoiceMatch = input.match(/^(?:upload|add)\s+voice\s+(?:"([^"]+)"|'([^']+)'|(\S+))(?:\s+(?:to|for)\s+(?:item\s+)?([a-f0-9]{24}|\d+))?/i);
+  if (uploadVoiceMatch) {
+    const durationMatch = input.match(/\b(?:duration|for)\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?)\b/i);
+    return {
+      intent: 'upload_voice',
+      entities: {
+        filePath: uploadVoiceMatch[1] ?? uploadVoiceMatch[2] ?? uploadVoiceMatch[3],
+        itemId: uploadVoiceMatch[4],
+        listName,
+        duration: durationMatch ? Number(durationMatch[1]) : undefined,
+        transcribe: /\btranscrib(?:e|ed|ing)\b/i.test(input),
+      },
+    };
+  }
+
+  const uploadAttachmentMatch = input.match(/^(?:attach|upload)\s+(?:file|attachment)\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s+to\s+item\s+([a-f0-9]{24}|\d+)/i);
+  if (uploadAttachmentMatch) {
+    return {
+      intent: 'upload_attachment',
+      entities: {
+        filePath: uploadAttachmentMatch[1] ?? uploadAttachmentMatch[2] ?? uploadAttachmentMatch[3],
+        itemId: uploadAttachmentMatch[4],
+      },
+    };
+  }
+
+  const deleteAttachmentMatch = input.match(/^(?:delete|remove)\s+attachment\s+([a-f0-9]{24}|\d+)\s+from\s+item\s+([a-f0-9]{24}|\d+)/i);
+  if (deleteAttachmentMatch) {
+    return { intent: 'delete_attachment', entities: { attachmentId: deleteAttachmentMatch[1], itemId: deleteAttachmentMatch[2] } };
+  }
+
+  const deleteItemImageMatch = input.match(/^(?:delete|remove)\s+(?:the\s+)?image\s+(?:from|on)\s+item\s+([a-f0-9]{24}|\d+)/i);
+  if (deleteItemImageMatch) {
+    return { intent: 'delete_item_image', entities: { itemId: deleteItemImageMatch[1] } };
+  }
+
+  const fileUrlMatch = input.match(/^(?:get|show|generate)\s+(?:a\s+)?file\s+url\s+for\s+["']?(.+?)["']?(?:\s+expires\s+(\d+))?$/i);
+  if (fileUrlMatch) {
+    return { intent: 'file_url', entities: { fileKey: fileUrlMatch[1].trim(), expiresIn: fileUrlMatch[2] ? Number(fileUrlMatch[2]) : undefined } };
+  }
+
+  if (/^(?:check|show|get)\s+(?:the\s+)?(?:api\s+)?health\b/i.test(lower)) {
+    return { intent: 'api_health', entities: {} };
+  }
+  if (/^(?:show|get|check)\s+(?:the\s+)?(?:api\s+)?version\b/i.test(lower)) {
+    return { intent: 'api_version', entities: {} };
+  }
 
   const updateItemCommentMatch = input.match(/^(?:update|edit|change)\s+comment\s+([a-f0-9]{24}|\d+)\s+(?:on|for)\s+item\s+([a-f0-9]{24}|\d+)/i);
   if (updateItemCommentMatch) {
@@ -273,6 +346,12 @@ function parseIntent(input: string): ParsedIntent {
     return { intent: 'add_note_comment', entities: { noteId: addNoteCommentMatch[1], itemId: addNoteCommentMatch[2], note: itemText } };
   }
 
+  const reorderNotesMatch = input.match(/^reorder\s+notes?\s+(?:on|for)\s+item\s+([a-f0-9]{24}|\d+)(?:\s*(?:in\s+(?:the\s+)?order|as|to)\s*:?\s*(.+))?$/i);
+  if (reorderNotesMatch) {
+    const noteIds = (reorderNotesMatch[2] ?? '').match(/[a-f0-9]{24}|\d+/gi) ?? [];
+    return { intent: 'reorder_notes', entities: { itemId: reorderNotesMatch[1], noteIds } };
+  }
+
   if (/^(?:show|get|view)\s+item\s+([a-f0-9]{24}|\d+)(?:\s+(?:details|info))?$/i.test(lower)) {
     return { intent: 'get_item', entities: { itemId } };
   }
@@ -293,9 +372,21 @@ function parseIntent(input: string): ParsedIntent {
     return { intent: 'email_priority', entities: { email, theme, includeArchived } };
   }
 
+  // Export a single item before generic export-list handling.
+  const exportItemMatch = input.match(/^export\s+item\s+([a-f0-9]{24}|\d+)/i);
+  if (exportItemMatch) {
+    return { intent: 'export_item', entities: { itemId: exportItemMatch[1], format, theme } };
+  }
+
   // Export list
   if (/^export\b/.test(lower)) {
     return { intent: 'export_list', entities: { listName, format, theme, includeArchived } };
+  }
+
+  // Email a single item before generic email-list handling.
+  const emailItemMatch = input.match(/^email\s+item\s+([a-f0-9]{24}|\d+)/i);
+  if (emailItemMatch) {
+    return { intent: 'email_item', entities: { itemId: emailItemMatch[1], email, theme } };
   }
 
   // Email list
@@ -311,9 +402,9 @@ function parseIntent(input: string): ParsedIntent {
 
   // Delete list: "delete my X list" (captures X) or "delete list X" (captures X)
   // For "delete list X": don't use deleteListMatch (it expects 'list' at end)
-  const isDeleteListPattern = /^delete\s+(?:my\s+)?.*\s+list$/i.test(lower) || /^delete\s+list\s+/i.test(lower);
+  const isDeleteListPattern = /^delete\s+(?:my\s+)?.*\s+list(?:\s+(?:force|permanently))?$/i.test(lower) || /^delete\s+list\s+/i.test(lower);
   if (isDeleteListPattern && finalDeleteListName) {
-    return { intent: 'delete_list', entities: { listName: finalDeleteListName } };
+    return { intent: 'delete_list', entities: { listName: finalDeleteListName, forceDelete } };
   }
 
   // Search (check before get_items - "search for X" vs "search my X list")
@@ -395,7 +486,7 @@ function parseIntent(input: string): ParsedIntent {
   // Update list (rename, change description, etc.)
   if (/^(update|edit|rename|change)\s+(?:my\s+)?.+?\s+list/i.test(lower)) {
     const ulMatch = input.match(/^(update|edit|rename|change)\s+(?:my\s+)?(.+?)\s+list/i);
-    return { intent: 'update_list', entities: { listName: normalizeListName(ulMatch?.[2]), itemText } };
+    return { intent: 'update_list', entities: { listName: normalizeListName(ulMatch?.[2]), itemText, listType } };
   }
 
   // Update list user permission
@@ -423,7 +514,7 @@ function parseIntent(input: string): ParsedIntent {
     if (priority) {
       return { intent: 'get_priority', entities: { listName } };
     }
-    return { intent: 'get_items', entities: { listName } };
+    return { intent: 'get_items', entities: { listName, includeArchived } };
   }
 
   // Mark done
@@ -474,6 +565,19 @@ class ListerClient {
     };
   }
 
+  private getMultipartHeader(): Record<string, string> {
+    // Let fetch add the multipart boundary; setting Content-Type manually breaks uploads.
+    return {
+      'X-API-Key': this.apiKey,
+      'Accept': 'application/json',
+    };
+  }
+
+  private fileUrl(fileKey: string, suffix = ''): string {
+    const encodedKey = fileKey.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/');
+    return `${this.baseUrl}/v1/files/${encodedKey}${suffix}`;
+  }
+
   private async parseResponse(res: any): Promise<ParsedApiResponse> {
     const finalHost = res.url ? new URL(res.url).host : this.expectedHost;
     const contentType = res.headers?.get?.('content-type') ?? '';
@@ -518,9 +622,10 @@ class ListerClient {
     }
   }
 
-  async deleteList(listId: string): Promise<ListerResponse> {
+  async deleteList(listId: string, force = false): Promise<ListerResponse> {
     try {
-      const res = await fetch(`${this.baseUrl}/v1/lists/${listId}`, {
+      const url = `${this.baseUrl}/v1/lists/${listId}${force ? '?force=true' : ''}`;
+      const res = await fetch(url, {
         method: 'DELETE',
         headers: this.getAuthHeader(),
       });
@@ -545,9 +650,10 @@ class ListerClient {
     }
   }
 
-  async getItems(listId: string): Promise<ListerResponse> {
+  async getItems(listId: string, options?: { includeArchived?: boolean }): Promise<ListerResponse> {
     try {
-      const res = await fetch(`${this.baseUrl}/v1/lists/${listId}/items`, {
+      const suffix = options?.includeArchived ? '?includeArchived=true' : '';
+      const res = await fetch(`${this.baseUrl}/v1/lists/${listId}/items${suffix}`, {
         headers: this.getAuthHeader(),
       });
       const { ok, data, error } = await this.parseResponse(res);
@@ -656,6 +762,57 @@ class ListerClient {
       return { success: ok, message: ok ? 'Note added' : `Failed: ${error}`, data };
     } catch (err) {
       return { success: false, message: `Error adding note: ${err}` };
+    }
+  }
+
+  async reorderNotes(itemId: string, noteIds: string[]): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/items/${itemId}/notes/reorder`, {
+        method: 'PUT',
+        headers: this.getAuthHeader(),
+        body: JSON.stringify({ order: noteIds }),
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'Notes reordered' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error reordering notes: ${err}` };
+    }
+  }
+
+  async exportItem(itemId: string, options: { format?: 'json' | 'html'; theme?: 'light' | 'dark'; filename?: string }): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/items/${itemId}/export`, {
+        method: 'POST',
+        headers: this.getAuthHeader(),
+        body: JSON.stringify({ format: options.format || 'json', theme: options.theme, filename: options.filename }),
+      });
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') ?? '';
+        if (contentType.includes('text/html')) {
+          const html = await res.text();
+          return { success: true, message: `Item exported as HTML (${html.length} bytes)`, data: { format: 'html', size: html.length } };
+        }
+        const { data } = await this.parseResponse(res);
+        return { success: true, message: 'Item exported as JSON', data };
+      }
+      const { data, error } = await this.parseResponse(res);
+      return { success: false, message: `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error exporting item: ${err}` };
+    }
+  }
+
+  async emailItem(itemId: string, options: { toEmail?: string; theme?: 'light' | 'dark' }): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/items/${itemId}/export/email`, {
+        method: 'POST',
+        headers: this.getAuthHeader(),
+        body: JSON.stringify({ toEmail: options.toEmail, theme: options.theme }),
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'Item emailed successfully' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error emailing item: ${err}` };
     }
   }
 
@@ -787,18 +944,15 @@ class ListerClient {
       return { success: false, message: `Failed: ${listsResult.message}` };
     }
 
-    const priorityItems: any[] = [];
-    for (const list of listsResult.data) {
-      const listId = list.id;
-      if (!listId) continue;
-      const itemsResult = await this.getItems(listId);
-      if (!itemsResult.success || !Array.isArray(itemsResult.data)) continue;
-      priorityItems.push(
-        ...itemsResult.data
-          .filter((item: any) => item.isPriority)
-          .map((item: any) => ({ ...item, listName: list.name })),
-      );
-    }
+    const listResults = await Promise.all(listsResult.data.map(async (list: any) => {
+      if (!list.id) return [];
+      const itemsResult = await this.getItems(list.id);
+      if (!itemsResult.success || !Array.isArray(itemsResult.data)) return [];
+      return itemsResult.data
+        .filter((item: any) => item.isPriority)
+        .map((item: any) => ({ ...item, listName: list.name }));
+    }));
+    const priorityItems = listResults.flat();
 
     return {
       success: true,
@@ -1106,6 +1260,94 @@ class ListerClient {
       return { success: false, message: `Error updating note status: ${err}` };
     }
   }
+
+  private async uploadFile(url: string, filePath: string, fields: Record<string, string | number | boolean | undefined>): Promise<ListerResponse> {
+    try {
+      const form = new FormData();
+      form.append('file', await fileFrom(filePath));
+      for (const [name, value] of Object.entries(fields)) {
+        if (value !== undefined) form.append(name, String(value));
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getMultipartHeader(),
+        body: form,
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'File uploaded' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error uploading file: ${err}` };
+    }
+  }
+
+  async uploadAttachment(itemId: string, filePath: string): Promise<ListerResponse> {
+    return this.uploadFile(`${this.baseUrl}/v1/items/${itemId}/attachments`, filePath, {});
+  }
+
+  async deleteAttachment(itemId: string, attachmentId: string): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/items/${itemId}/attachments/${attachmentId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeader(),
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'Attachment deleted' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error deleting attachment: ${err}` };
+    }
+  }
+
+  async deleteItemImage(itemId: string): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/items/${itemId}/image`, {
+        method: 'DELETE',
+        headers: this.getAuthHeader(),
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'Item image deleted' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error deleting item image: ${err}` };
+    }
+  }
+
+  async uploadImage(filePath: string, options: { description?: string; listId?: string; itemId?: string }): Promise<ListerResponse> {
+    return this.uploadFile(`${this.baseUrl}/v1/upload/image`, filePath, {
+      description: options.description,
+      list_id: options.listId,
+      item_id: options.itemId,
+    });
+  }
+
+  async uploadVoice(filePath: string, options: { duration?: number; transcribe?: boolean; listId?: string; itemId?: string }): Promise<ListerResponse> {
+    return this.uploadFile(`${this.baseUrl}/v1/upload/voice`, filePath, {
+      duration: options.duration,
+      transcribe: options.transcribe,
+      list_id: options.listId,
+      item_id: options.itemId,
+    });
+  }
+
+  async getFileUrl(fileKey: string, expiresIn = 3600): Promise<ListerResponse> {
+    try {
+      const res = await fetch(this.fileUrl(fileKey, `?expires_in=${expiresIn}`), {
+        headers: this.getAuthHeader(),
+      });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? 'File URL generated' : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error generating file URL: ${err}` };
+    }
+  }
+
+  async getApiStatus(kind: 'health' | 'version'): Promise<ListerResponse> {
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/${kind}`, { headers: this.getAuthHeader() });
+      const { ok, data, error } = await this.parseResponse(res);
+      return { success: ok, message: ok ? `API ${kind}` : `Failed: ${error}`, data };
+    } catch (err) {
+      return { success: false, message: `Error checking API ${kind}: ${err}` };
+    }
+  }
 }
 
 // ─── List Name Matching ─────────────────────────────────────────────────────
@@ -1213,7 +1455,7 @@ export async function handleCommand(input: string): Promise<string> {
       }
       const result = await resolveList(parsed.entities.listName);
       if ('error' in result) return result.error;
-      const itemsResult = await client.getItems(result.list.id);
+      const itemsResult = await client.getItems(result.list.id, { includeArchived: parsed.entities.includeArchived });
       return formatResponse(itemsResult);
     }
 
@@ -1265,6 +1507,7 @@ export async function handleCommand(input: string): Promise<string> {
       if (parsed.entities.itemText && parsed.entities.itemId) updates.content = parsed.entities.itemText;
       if (parsed.entities.priority) updates.isPriority = true;
       if (parsed.entities.reminder) updates.reminder = parsed.entities.reminder;
+      if (parsed.entities.project) updates.project = parsed.entities.project;
       const result = await client.updateItem(itemId, updates);
       return formatResponse(result);
     }
@@ -1274,6 +1517,28 @@ export async function handleCommand(input: string): Promise<string> {
         return '❌ Please specify which item to show (e.g., "show item 123")';
       }
       const result = await client.getItem(parsed.entities.itemId);
+      return formatResponse(result);
+    }
+
+    case 'export_item': {
+      if (!parsed.entities.itemId) {
+        return '❌ Please specify which item to export (e.g., "export item 123 as html")';
+      }
+      const result = await client.exportItem(parsed.entities.itemId, {
+        format: parsed.entities.format,
+        theme: parsed.entities.theme,
+      });
+      return formatResponse(result);
+    }
+
+    case 'email_item': {
+      if (!parsed.entities.itemId) {
+        return '❌ Please specify which item to email (e.g., "email item 123 to user@example.com")';
+      }
+      const result = await client.emailItem(parsed.entities.itemId, {
+        toEmail: parsed.entities.email,
+        theme: parsed.entities.theme,
+      });
       return formatResponse(result);
     }
 
@@ -1292,6 +1557,14 @@ export async function handleCommand(input: string): Promise<string> {
         return '❌ Please specify item and note (e.g., "note for item 123: \\"remember to call back\\"")';
       }
       const result = await client.addNote(parsed.entities.itemId, parsed.entities.note);
+      return formatResponse(result);
+    }
+
+    case 'reorder_notes': {
+      if (!parsed.entities.itemId || !parsed.entities.noteIds?.length) {
+        return '❌ Please specify an item ID and note IDs in the desired order';
+      }
+      const result = await client.reorderNotes(parsed.entities.itemId, parsed.entities.noteIds);
       return formatResponse(result);
     }
 
@@ -1358,6 +1631,81 @@ export async function handleCommand(input: string): Promise<string> {
       const result = await client.deleteNoteComment(parsed.entities.itemId, parsed.entities.noteId, parsed.entities.commentId);
       return formatResponse(result);
     }
+
+    case 'upload_attachment': {
+      if (!parsed.entities.itemId || !parsed.entities.filePath) {
+        return '❌ Please specify a file path and item ID (e.g., "attach file C:\\docs\\plan.pdf to item 123")';
+      }
+      const result = await client.uploadAttachment(parsed.entities.itemId, parsed.entities.filePath);
+      return formatResponse(result);
+    }
+
+    case 'delete_attachment': {
+      if (!parsed.entities.itemId || !parsed.entities.attachmentId) {
+        return '❌ Please specify attachment ID and item ID';
+      }
+      const result = await client.deleteAttachment(parsed.entities.itemId, parsed.entities.attachmentId);
+      return formatResponse(result);
+    }
+
+    case 'delete_item_image': {
+      if (!parsed.entities.itemId) {
+        return '❌ Please specify which item image to delete';
+      }
+      const result = await client.deleteItemImage(parsed.entities.itemId);
+      return formatResponse(result);
+    }
+
+    case 'upload_image': {
+      if (!parsed.entities.filePath) {
+        return '❌ Please specify an image file path';
+      }
+      let listId: string | undefined;
+      if (parsed.entities.listName && !parsed.entities.itemId) {
+        const listResult = await resolveList(parsed.entities.listName);
+        if ('error' in listResult) return listResult.error;
+        listId = listResult.list.id;
+      }
+      const result = await client.uploadImage(parsed.entities.filePath, {
+        listId,
+        itemId: parsed.entities.itemId,
+        description: parsed.entities.description,
+      });
+      return formatResponse(result);
+    }
+
+    case 'upload_voice': {
+      if (!parsed.entities.filePath) {
+        return '❌ Please specify a voice file path';
+      }
+      let listId: string | undefined;
+      if (parsed.entities.listName && !parsed.entities.itemId) {
+        const listResult = await resolveList(parsed.entities.listName);
+        if ('error' in listResult) return listResult.error;
+        listId = listResult.list.id;
+      }
+      const result = await client.uploadVoice(parsed.entities.filePath, {
+        duration: parsed.entities.duration,
+        transcribe: parsed.entities.transcribe,
+        listId,
+        itemId: parsed.entities.itemId,
+      });
+      return formatResponse(result);
+    }
+
+    case 'file_url': {
+      if (!parsed.entities.fileKey) {
+        return '❌ Please specify a file key';
+      }
+      const result = await client.getFileUrl(parsed.entities.fileKey, parsed.entities.expiresIn);
+      return formatResponse(result);
+    }
+
+    case 'api_health':
+      return formatResponse(await client.getApiStatus('health'));
+
+    case 'api_version':
+      return formatResponse(await client.getApiStatus('version'));
 
     case 'export_list': {
       if (!parsed.entities.listName) {
@@ -1426,7 +1774,7 @@ export async function handleCommand(input: string): Promise<string> {
         const names = allLists.data.map((l: any) => l.name).join(', ');
         return `❌ List '${parsed.entities.listName}' not found. Available: ${names}`;
       }
-      const dResult = await client.deleteList(targetList.id);
+      const dResult = await client.deleteList(targetList.id, parsed.entities.forceDelete);
       return formatResponse(dResult);
     }
 
@@ -1574,6 +1922,7 @@ export async function handleCommand(input: string): Promise<string> {
       if ('error' in ulList) return ulList.error;
       const updates: Record<string, any> = {};
       if (parsed.entities.itemText) updates.name = parsed.entities.itemText;
+      if (parsed.entities.listType) updates.type = parsed.entities.listType;
       const ulResult = await client.updateList(ulList.list.id, updates);
       return formatResponse(ulResult);
     }
