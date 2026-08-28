@@ -1476,6 +1476,37 @@ describe('current API command coverage', () => {
     assert.equal(emailed.entities.email, 'user@example.com');
   });
 
+  it('routes send aliases and friendly recipient names', () => {
+    const list = actualParseIntent('send my work list to Mom');
+    assert.equal(list.intent, 'email_list');
+    assert.equal(list.entities.listName, 'work');
+    assert.equal(list.entities.email, 'mom');
+
+    const item = actualParseIntent('send item 123 to "Sarah Smith"');
+    assert.equal(item.intent, 'email_item');
+    assert.equal(item.entities.itemId, '123');
+    assert.equal(item.entities.email, 'sarah smith');
+
+    const priority = actualParseIntent('send priority items to Alex');
+    assert.equal(priority.intent, 'email_priority');
+    assert.equal(priority.entities.email, 'alex');
+  });
+
+  it('keeps API key commands distinct from environment switching', () => {
+    assert.deepEqual(actualParseIntent('set staging API key to secret-value'), {
+      intent: 'set_api_key',
+      entities: { apiEnvironment: 'staging', apiKey: 'secret-value' },
+    });
+    assert.deepEqual(actualParseIntent('switch to production'), {
+      intent: 'set_api_environment',
+      entities: { apiEnvironment: 'production' },
+    });
+    assert.deepEqual(actualParseIntent('set API base URL to https://staging.example.com'), {
+      intent: 'set_api_environment',
+      entities: { apiBaseUrl: 'https://staging.example.com' },
+    });
+  });
+
   it('routes note reorder and archived item reads', () => {
     assert.deepEqual(actualParseIntent('reorder notes for item 123 in order: 456, 789'), {
       intent: 'reorder_notes',

@@ -13,7 +13,12 @@ npm run build
 
 # Set environment variables
 export LISTER_BASE_URL="https://api.mylister.dev"
+export LISTER_PRODUCTION_BASE_URL="https://api.mylister.dev"
+export LISTER_STAGING_BASE_URL="https://staging-api.mylister.dev"
 export LISTER_API_KEY="your-api-key-here"
+export LISTER_PRODUCTION_API_KEY="your-production-key"
+export LISTER_STAGING_API_KEY="your-staging-key"
+export LISTER_CONTACTS='{"Sarah":"sarah@example.com","mom":"mom@example.com"}'
 ```
 
 The API key is read from the environment and sent as `X-API-Key`. Never commit an API key to this repository or place it in a prompt. On Windows PowerShell, use:
@@ -22,7 +27,12 @@ Get your key in [MyLister.dev Settings](https://app.mylister.dev/settings) under
 
 ```powershell
 $env:LISTER_BASE_URL = "https://api.mylister.dev"
+$env:LISTER_PRODUCTION_BASE_URL = "https://api.mylister.dev"
+$env:LISTER_STAGING_BASE_URL = "https://staging-api.mylister.dev"
 $env:LISTER_API_KEY = "your-api-key-here"
+$env:LISTER_PRODUCTION_API_KEY = "your-production-key"
+$env:LISTER_STAGING_API_KEY = "your-staging-key"
+$env:LISTER_CONTACTS = '{"Sarah":"sarah@example.com","mom":"mom@example.com"}'
 ```
 
 ## Install In Agent Hosts
@@ -117,11 +127,14 @@ console.log(response);
 | Item comments | `comment on item [id]: "text"` |
 | Note comments | `comment on note [note_id] for item [id]: "text"` |
 | Export item | `export item [id] as html` |
-| Email item | `email item [id] to user@example.com` |
+| Email item / list / priority | `email item [id] to Sarah` / `send my work list to Mom` / `send priority items to Alex` |
 | Reorder notes | `reorder notes for item [id] in order: [note_id], [note_id]` |
 | Attach file | `attach file "C:\\docs\\plan.pdf" to item [id]` |
 | Upload media | `upload image "C:\\images\\brief.png" to item [id]` |
 | File URL | `get file URL for [file_key] expires 3600` |
+| API environment | `switch to production` / `switch to staging` |
+| API base URL | `set API base URL to https://api-staging.mylister.dev` |
+| API key | `set API key to abc123` |
 | Reminders | `add "task" to my today list reminder tomorrow at 9am` |
 | Notebook lists | `create a new list called Journal notebook` |
 | Project lists | `create a new project list called Website Launch` |
@@ -131,7 +144,8 @@ console.log(response);
 ## API
 
 - **API documentation:** [MyLister API docs](https://api.mylister.dev/docs)
-- **Base URL:** `https://api.mylister.dev`
+- **Base URL:** `https://api.mylister.dev` (or override with `LISTER_BASE_URL`, `LISTER_PRODUCTION_BASE_URL`, `LISTER_STAGING_BASE_URL`)
+- **Production/staging keys:** Set `LISTER_PRODUCTION_API_KEY` / `LISTER_STAGING_API_KEY` when envs use different credentials.
 - **Auth:** API key via `X-API-Key`
 - **Endpoints:** `/v1/lists`, `/v1/items`, `/v1/items/priority`, item/note comments, item exports, note reorder, attachments, media uploads, file URLs, health, and version
 

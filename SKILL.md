@@ -44,6 +44,11 @@ The following environment variables must be set before invoking the skill:
 |----------|----------|-------------|
 | `LISTER_BASE_URL` | No | Lister API base URL. Defaults to `https://api.mylister.dev` |
 | `LISTER_API_KEY` | **Yes** | API key for authenticating with the Lister API via `X-API-Key` |
+| `LISTER_PRODUCTION_BASE_URL` | No | Optional production API base URL override (defaults to `https://api.mylister.dev`) |
+| `LISTER_STAGING_BASE_URL` | No | Optional staging API base URL override |
+| `LISTER_PRODUCTION_API_KEY` | No | Optional production API key override for environment switching |
+| `LISTER_STAGING_API_KEY` | No | Optional staging API key override for environment switching |
+| `LISTER_CONTACTS` | No | Optional JSON contact directory for email alias resolution. Supports either object map (`{"name":"email"}`) or array entries (`{"name","email","alias","aliases":[]}`) |
 
 ## How to Invoke
 
@@ -220,23 +225,29 @@ Export one item as JSON or HTML.
 | `export item [id] as html` | `export item 123 as html theme dark` |
 
 ### 10a. Email Item
-Email one item as an HTML export.
+Email (or send) one item as an HTML export.
 
 | Pattern | Example |
 |---------|---------|
 | `email item [id]` | `email item 123` |
-| `email item [id] to [email]` | `email item 123 to user@example.com` |
+| `email item [id] to [email|name|nickname]` | `email item 123 to user@example.com`<br/>`email item 123 to "Sarah"` |
+| `send item [id]` | `send item 123` |
+| `send item [id] to [email|name|nickname]` | `send item 123 to "Sarah"` |
 
 ### 10. Email List
-Email a list to yourself or someone else.
+Email (or send) a list to yourself or someone else.
 
 | Pattern | Example |
 |---------|---------|
 | `email my [list] list to email@example.com` | `email my today list to maik@example.com` |
+| `email my [list] list to [name|nickname]` | `email my today list to "Mom"` |
+| `send my [list] list to email@example.com` | `send my today list to maik@example.com` |
 | `email my [list] list` | `email my work list` (sends to your email) |
+| `send my [list] list` | `send my work list` (sends to your email) |
 | `email my [list] list theme dark` | `email my projects list theme dark` |
+| `send my [list] list theme dark` | `send my projects list theme dark` |
 
-**Keywords:** `email`, `to`
+**Keywords:** `email`, `send`, `to`
 
 ### 11. Export Priority Items
 Export all priority/urgent items across all lists.
@@ -250,15 +261,19 @@ Export all priority/urgent items across all lists.
 **Keywords:** `export`, `priority`, `urgent`, `important`
 
 ### 12. Email Priority Items
-Email all priority items to yourself or someone else.
+Email (or send) all priority items to yourself or someone else.
 
 | Pattern | Example |
 |---------|---------|
 | `email priority items to email@example.com` | `email priority items to maik@example.com` |
+| `email priority items to [name|nickname]` | `email priority items to "Alex"` |
+| `send priority items to email@example.com` | `send priority items to maik@example.com` |
 | `email priority items` | `email priority items` (sends to your email) |
+| `send priority items` | `send priority items` (sends to your email) |
 | `email priority items theme dark` | `email priority items theme dark` |
+| `send priority items theme dark` | `send priority items theme dark` |
 
-**Keywords:** `email`, `priority`, `urgent`, `important`
+**Keywords:** `email`, `send`, `priority`, `urgent`, `important`
 
 ### 13. Create List
 Create a new list.
@@ -460,6 +475,17 @@ Check the deployed public API without touching list data.
 | `check API health` | `check API health` |
 | `show API version` | `show API version` |
 
+### 31a. API Environment and Credentials
+Switch between configured API environments or apply API keys at runtime.
+
+| Pattern | Example |
+|---------|---------|
+| `switch to production` | `switch to production` |
+| `switch to staging` | `switch to staging` |
+| `set API base URL to https://...` | `set API base URL to https://api-staging.mylister.dev` |
+| `set API key to your-key` | `set API key to abc123` |
+| `set staging API key to your-key` | `set staging API key to abc123` |
+
 ---
 
 ## API Reference
@@ -574,7 +600,7 @@ lister-skill/
 10. **Item creation** no longer requires `listId` in the request body — it's derived from the URL path.
 11. **API key creation** now returns `201 Created` (was `200 OK`).
 12. **Note creation** now returns `201 Created` (was `200 OK`).
-13. **The public API host is `https://api.mylister.dev`**. Override `LISTER_BASE_URL` only for staging or local testing.
+13. **The default public API host is `https://api.mylister.dev`**. Override with `LISTER_BASE_URL`, `LISTER_PRODUCTION_BASE_URL`, or `LISTER_STAGING_BASE_URL` per environment.
 14. **Comments are first-class resources** on both items and notes. Use the comment endpoints instead of treating item comments as notes.
 15. **Move completed** reorders completed items to the bottom of the same list; it no longer moves them to another list.
 16. **Notebook lists** are created by passing `type: "notebook"` when the user asks for a notebook or journal list.

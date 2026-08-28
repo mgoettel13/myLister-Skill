@@ -23,6 +23,15 @@ const CONFIG = {
   defaultListName: 'Quick Takes',
 };
 
+type ApiEnvironment = 'production' | 'staging' | 'custom';
+
+type ContactDirectory = Record<string, string>;
+
+interface RecipientResolution {
+  toEmail?: string;
+  error?: string;
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Intent = 'add_item' | 'get_items' | 'get_priority' | 'mark_done' |
               'remove_item' | 'update_item' | 'move_item' | 'add_note' |
@@ -31,12 +40,13 @@ type Intent = 'add_item' | 'get_items' | 'get_priority' | 'mark_done' |
               'create_list' | 'delete_list' | 'search' | 'list_summary' |
               'share_list' | 'list_users' | 'remove_list_user' | 'update_list_user' |
               'reorder_lists' | 'reorder_items' | 'move_completed' |
-              'update_list' | 'get_list' | 'get_item' |
+               'update_list' | 'get_list' | 'get_item' |
               'add_item_comment' | 'get_item_comments' | 'update_item_comment' | 'delete_item_comment' |
               'add_note_comment' | 'get_note_comments' | 'update_note_comment' | 'delete_note_comment' |
               'export_item' | 'email_item' | 'reorder_notes' |
               'upload_attachment' | 'delete_attachment' | 'delete_item_image' |
               'upload_image' | 'upload_voice' | 'file_url' | 'api_health' | 'api_version' |
+              'set_api_environment' | 'set_api_key' |
               'unknown';
 
 interface ParsedIntent {
@@ -82,6 +92,9 @@ interface ParsedIntent {
       durationMinutes?: number;
       assignedTo?: string;
     };
+    apiEnvironment?: ApiEnvironment;
+    apiBaseUrl?: string;
+    apiKey?: string;
   };
 }
 
@@ -98,6 +111,223 @@ interface ParsedApiResponse {
   error?: string;
 }
 
+interface CandidateRecipient {
+  email: string;
+  nameHints: string[];
+}
+
+function normalizeContactValue(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^(?:"|')|(?:"|')$/g, '')
+    .replace(/[,\s]+$/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function parseContactDirectory(): ContactDirectory {
+  const raw = process.env.LISTER_CONTACTS;
+  if (!raw) return {};
+
+  try {
+    const parsed = JSON.parse(raw);
+    const directory: ContactDirectory = {};
+
+    if (Array.isArray(parsed)) {
+      for (const entry of parsed) {
+        if (!entry || typeof entry !== 'object') continue;
+        const email = typeof (entry as any).email === 'string' ? (entry as any).email.trim() : '';
+        if (!isEmailAddress(email)) continue;
+
+        const aliases: string[] = [];
+        const primaryAlias = typeof (entry as any).name === 'string' ? (entry as any).name : '';
+        if (primaryAlias) aliases.push(primaryAlias);
+        if (typeof (entry as any).alias === 'string') aliases.push((entry as any).alias);
+
+        const listAliases = Array.isArray((entry as any).aliases) ? (entry as any).aliases : [];
+        if (Array.isArray(listAliases)) {
+          aliases.push(...listAliases.filter((a: any) => typeof a === 'string'));
+        }
+
+        for (const alias of aliases) {
+          directory[normalizeContactValue(alias)] = email;
+        }
+      }
+      return directory;
+    }
+
+    if (parsed && typeof parsed === 'object') {
+      for (const [alias, email] of Object.entries(parsed)) {
+        if (typeof email === 'string' && isEmailAddress(email)) {
+          directory[normalizeContactValue(alias)] = email;
+        }
+      }
+      return directory;
+    }
+  } catch {
+    // Ignore invalid JSON for backward compatibility.
+  }
+
+  return {};
+}
+
+function resolveAliasRecipient(toInput: string): string | undefined {
+  return CONTACT_DIRECTORY[normalizeContactValue(toInput)];
+}
+
+function getUserEmail(user: any): string | undefined {
+  if (!user || typeof user !== 'object') return undefined;
+  const candidates = [user.userId, user.email, user.id];
+  for (const value of candidates) {
+    if (typeof value === 'string' && isEmailAddress(value)) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function getUserNameHints(user: any): string[] {
+  const rawCandidates: any[] = [];
+  const push = (value: any) => {
+    if (typeof value === 'string') rawCandidates.push(value);
+    else if (Array.isArray(value)) rawCandidates.push(...value.filter((entry: any) => typeof entry === 'string'));
+  };
+
+  push(user.name);
+  push(user.fullName);
+  push(user.firstName);
+  push(user.lastName);
+  push(user.displayName);
+  push(user.username);
+  push(user.nickname);
+  push(user.nickName);
+  push(user.alias);
+  push(user.profile?.name);
+  push(user.profile?.fullName);
+  push(user.profile?.displayName);
+  push(user.profile?.nickname);
+  push(user.profile?.nickName);
+  push(user.profile?.alias);
+  push(user.aliases);
+
+  const cleaned = rawCandidates
+    .filter(Boolean)
+    .map((value) => normalizeContactValue(String(value)))
+    .filter(Boolean);
+  return [...new Set(cleaned)];
+}
+
+function formatRecipientLabel(match: CandidateRecipient): string {
+  const name = match.nameHints[0];
+  return name ? `${name} (${match.email})` : match.email;
+}
+
+function isEmailAddress(value: string): boolean {
+  return /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(value);
+}
+
+async function resolveRecipientInput(
+  recipient: string | undefined,
+  client: ListerClient,
+): Promise<RecipientResolution> {
+  if (!recipient) return {};
+
+  const normalizedRecipient = normalizeContactValue(recipient);
+  if (!normalizedRecipient) return {};
+  if (isEmailAddress(normalizedRecipient)) {
+    return { toEmail: normalizedRecipient };
+  }
+
+  const aliasEmail = resolveAliasRecipient(normalizedRecipient);
+  if (aliasEmail) return { toEmail: aliasEmail };
+
+  const listsResponse = await client.getLists();
+  if (!listsResponse.success || !Array.isArray(listsResponse.data)) {
+    return {
+      error: '❌ I found a contact name, but could not load your MyLister users to resolve it. Use an email address instead.',
+    };
+  }
+
+  const listIds = listsResponse.data
+    .map((list: any) => (typeof list?.id === 'string' ? list.id : undefined))
+    .filter((listId): listId is string => Boolean(listId));
+
+  const recipientsByEmail = new Map<string, CandidateRecipient>();
+  const userResults = await Promise.all(listIds.map((listId) => client.getListUsers(listId)));
+  for (const userResult of userResults) {
+    if (!userResult.success || !Array.isArray(userResult.data)) continue;
+
+    for (const candidate of userResult.data) {
+      const email = getUserEmail(candidate);
+      if (!email || !isEmailAddress(email)) continue;
+
+      const normalizedEmail = normalizeContactValue(email);
+      const existing = recipientsByEmail.get(normalizedEmail) ?? {
+        email: normalizedEmail,
+        nameHints: [],
+      };
+      recipientsByEmail.set(normalizedEmail, {
+        email: existing.email,
+        nameHints: [...new Set([...existing.nameHints, ...getUserNameHints(candidate), normalizedEmail])],
+      });
+    }
+  }
+
+  const exact: CandidateRecipient[] = [];
+  const partial: CandidateRecipient[] = [];
+
+  for (const recipient of recipientsByEmail.values()) {
+    const haystack = [...recipient.nameHints, recipient.email];
+    let matchType: 'exact' | 'partial' | undefined;
+
+    for (const token of haystack) {
+      const tokenMatch = contactMatchType(token, normalizedRecipient);
+      if (tokenMatch === 'exact') {
+        matchType = 'exact';
+        break;
+      }
+      if (tokenMatch === 'partial' && matchType !== 'exact') {
+        matchType = 'partial';
+      }
+    }
+
+    if (matchType === 'exact') exact.push(recipient);
+    else if (matchType === 'partial') partial.push(recipient);
+  }
+
+  const candidates = exact.length > 0 ? exact : partial;
+  if (!candidates.length) {
+    return {
+      error: `❌ I couldn't find a contact match for "${recipient}". Use a full email or add it to LISTER_CONTACTS.`,
+    };
+  }
+
+  const unique = Array.from(new Map(candidates.map((entry) => [entry.email, entry])).values());
+  if (unique.length > 1) {
+    const suggestions = unique.map(formatRecipientLabel).join(', ');
+    return {
+      error: `❌ "${recipient}" matches multiple contacts. Be specific: ${suggestions}`,
+    };
+  }
+
+  return { toEmail: unique[0].email };
+}
+
+function extractRecipientInput(input: string): string | undefined {
+  const match = input.match(/\bto\s+(.+?)(?=\s+theme\s+(?:light|dark)\b|$)/i);
+  if (!match) return undefined;
+  return normalizeContactValue(match[1]);
+}
+
+function contactMatchType(candidate: string, target: string): 'exact' | 'partial' | undefined {
+  if (!candidate || !target) return undefined;
+  if (candidate === target) return 'exact';
+  if (target.length >= 3 && (candidate.includes(target) || target.includes(candidate))) return 'partial';
+  return undefined;
+}
+
+const CONTACT_DIRECTORY = parseContactDirectory();
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -113,6 +343,29 @@ function normalizeListName(value?: string): string | undefined {
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
+}
+
+const DEFAULT_PRODUCTION_BASE_URL = normalizeBaseUrl(process.env.LISTER_PRODUCTION_BASE_URL || 'https://api.mylister.dev');
+const DEFAULT_STAGING_BASE_URL = process.env.LISTER_STAGING_BASE_URL || process.env.LISTER_STAGING_URL;
+const DEFAULT_PRODUCTION_API_KEY = process.env.LISTER_PRODUCTION_API_KEY || process.env.LISTER_API_KEY || '';
+const DEFAULT_STAGING_API_KEY = process.env.LISTER_STAGING_API_KEY || process.env.LISTER_API_KEY || '';
+
+function resolveRuntimeApiEnvironment(baseUrl: string): ApiEnvironment {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (DEFAULT_STAGING_BASE_URL && normalized === normalizeBaseUrl(DEFAULT_STAGING_BASE_URL)) return 'staging';
+  if (normalized === DEFAULT_PRODUCTION_BASE_URL) return 'production';
+  return 'custom';
+}
+
+function parseApiEnvironmentValue(value: string): ApiEnvironment | undefined {
+  const normalized = value.toLowerCase().trim();
+  if (normalized === 'prod' || normalized === 'production' || normalized === 'live') {
+    return 'production';
+  }
+  if (normalized === 'stage' || normalized === 'staging' || normalized === 'stg') {
+    return 'staging';
+  }
+  return undefined;
 }
 
 function extractListName(input: string, verbs: string[] = []): string | undefined {
@@ -191,6 +444,39 @@ function parseProjectData(input: string): ParsedIntent['entities']['project'] {
   return Object.keys(project).length ? project : undefined;
 }
 
+function parseApiEnvironmentIntent(input: string, lower: string): { apiEnvironment?: ApiEnvironment; apiBaseUrl?: string } | undefined {
+  const explicitUrlMatch = input.match(/\b(?:use|switch|set|change)\b[^\n.]*\b(?:api\s+)?(?:base\s*url|endpoint|environment|env)\b[^\n.]*\b(?:to|at|is|=)\s+(https?:\/\/[^\s"'`]+)\b/i);
+  if (explicitUrlMatch?.[1]) {
+    return { apiBaseUrl: explicitUrlMatch[1] };
+  }
+
+  const explicitEnvironmentMatch = input.match(/\b(?:use|switch|set|change)\b[^\n.]*\b(?:api\s+)?(?:environment|env|base\s*url|endpoint)?[^\n.]*\b(?:to|for)\s+(production|staging|prod|stage|stg)\b/i);
+  if (explicitEnvironmentMatch?.[1]) {
+    const parsedEnv = parseApiEnvironmentValue(explicitEnvironmentMatch[1]);
+    if (parsedEnv) return { apiEnvironment: parsedEnv };
+  }
+
+  if (/\b(?:use|switch|set|change)\b/i.test(lower) && /\b(staging|production|prod|stage|stg)\b/i.test(lower)) {
+    const fallbackMatch = lower.match(/\b(staging|production|prod|stage|stg)\b/i);
+    const parsedEnv = parseApiEnvironmentValue(fallbackMatch?.[1] ?? '');
+    if (parsedEnv) return { apiEnvironment: parsedEnv };
+  }
+
+  return undefined;
+}
+
+function parseApiKeyIntent(input: string, lower: string): { apiEnvironment?: ApiEnvironment; apiKey?: string } | undefined {
+  const apiKeyMatch = input.match(/\b(?:set|use|change|update|store)\b[^\n.]*\b(?:api\s+)?key\b[^\n.]*?(?:\s+(?:to|is|:|=)\s+)(?:"([^"]+)"|'([^']+)'|([^\s"'`]+))/i);
+  if (!apiKeyMatch) return undefined;
+
+  const rawApiKey = apiKeyMatch[1] ?? apiKeyMatch[2] ?? apiKeyMatch[3];
+  if (!rawApiKey) return undefined;
+
+  const envMatch = lower.match(/\b(staging|production|prod|stage|stg)\b/i);
+  const apiEnvironment = parseApiEnvironmentValue(envMatch?.[1] ?? '');
+  return { apiEnvironment, apiKey: rawApiKey };
+}
+
 // ─── Intent Parser ───────────────────────────────────────────────────────────
 export function parseIntent(input: string): ParsedIntent {
   const lower = input.toLowerCase();
@@ -202,7 +488,7 @@ export function parseIntent(input: string): ParsedIntent {
   const listName =
     normalizeListName(input.match(/\b(?:to|in|on)\s+(?:my\s+)?(.+?)\s+list\b/i)?.[1]) ??
     normalizeListName(input.match(/\badd\s+to\s+(?:my\s+)?(.+?)(?::|$)/i)?.[1]) ??
-    extractListName(input, ['add', 'create', 'put', 'get', 'show', 'view', 'list', 'find', 'search', 'export', 'email', 'archive', 'unarchive', 'update', 'edit', 'rename', 'change']);
+    extractListName(input, ['add', 'create', 'put', 'get', 'show', 'view', 'list', 'find', 'search', 'export', 'email', 'send', 'archive', 'unarchive', 'update', 'edit', 'rename', 'change']);
 
   // Extract new list name for "create a new list called X" / "create list X"
   const createTypedListMatch = input.match(/(?:create|make|add)\s*(?:a\s+new\s+)?(standard|notebook|journal|project)\s+list\s*(?:called|named|\s)([^\n,]+)/i);
@@ -228,9 +514,9 @@ export function parseIntent(input: string): ParsedIntent {
   // Only extract noteId if it's explicitly requested (not just an item ID)
   const noteId = /(?:update|edit|change|delete|remove)\s+note/i.test(lower) || /note\s+(?:id\s*)?[a-f0-9]{24}/i.test(lower) ? (noteIdMatch ? noteIdMatch[1] : undefined) : undefined;
 
-  // Extract email: "to email@address.com"
-  const emailMatch = input.match(/to\s+([\w.+-]+@[\w.-]+\.[a-z]{2,})/i);
-  const email = emailMatch ? emailMatch[1] : undefined;
+  // Extract recipient for email-like commands (email address, alias, or contact name)
+  const emailMatch = extractRecipientInput(input);
+  const email = emailMatch;
 
   // Extract format: "as json", "as html"
   const formatMatch = lower.match(/as\s+(json|html)/i);
@@ -305,6 +591,16 @@ export function parseIntent(input: string): ParsedIntent {
     return { intent: 'file_url', entities: { fileKey: fileUrlMatch[1].trim(), expiresIn: fileUrlMatch[2] ? Number(fileUrlMatch[2]) : undefined } };
   }
 
+  const apiKeyIntent = parseApiKeyIntent(input, lower);
+  if (apiKeyIntent) {
+    return { intent: 'set_api_key', entities: apiKeyIntent };
+  }
+
+  const apiEnvIntent = parseApiEnvironmentIntent(input, lower);
+  if (apiEnvIntent) {
+    return { intent: 'set_api_environment', entities: apiEnvIntent };
+  }
+
   if (/^(?:check|show|get)\s+(?:the\s+)?(?:api\s+)?health\b/i.test(lower)) {
     return { intent: 'api_health', entities: {} };
   }
@@ -368,7 +664,7 @@ export function parseIntent(input: string): ParsedIntent {
   }
 
   // Email priority items (check before generic email list)
-  if (/^email\b/.test(lower) && priority) {
+  if (/^(?:email|send)\b/.test(lower) && priority) {
     return { intent: 'email_priority', entities: { email, theme, includeArchived } };
   }
 
@@ -384,13 +680,13 @@ export function parseIntent(input: string): ParsedIntent {
   }
 
   // Email a single item before generic email-list handling.
-  const emailItemMatch = input.match(/^email\s+item\s+([a-f0-9]{24}|\d+)/i);
+  const emailItemMatch = input.match(/^(?:email|send)\s+item\s+([a-f0-9]{24}|\d+)/i);
   if (emailItemMatch) {
     return { intent: 'email_item', entities: { itemId: emailItemMatch[1], email, theme } };
   }
 
   // Email list
-  if (/^email\b/.test(lower) && /list/.test(lower)) {
+  if (/^(?:email|send)\b/.test(lower) && /list/.test(lower)) {
     return { intent: 'email_list', entities: { listName, email, theme, includeArchived } };
   }
 
@@ -551,9 +847,9 @@ class ListerClient {
   private apiKey: string;
   private expectedHost: string;
 
-  constructor() {
-    this.baseUrl = normalizeBaseUrl(CONFIG.baseUrl);
-    this.apiKey = CONFIG.apiKey;
+  constructor(baseUrl = CONFIG.baseUrl, apiKey = CONFIG.apiKey) {
+    this.baseUrl = normalizeBaseUrl(baseUrl);
+    this.apiKey = apiKey;
     this.expectedHost = new URL(this.baseUrl).host;
   }
 
@@ -586,7 +882,7 @@ class ListerClient {
         ok: false,
         status: res.status,
         data: null,
-        error: `API request was redirected from ${this.expectedHost} to ${finalHost}. Check LISTER_BASE_URL and API DNS routing.`,
+        error: `API request was redirected from ${this.expectedHost} to ${finalHost}. Check your active API base URL and API DNS routing.`,
       };
     }
     if (contentType && !contentType.includes('application/json')) {
@@ -1417,7 +1713,63 @@ async function resolveList(listName: string, includeArchived: boolean = false): 
 }
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
-const client = new ListerClient();
+let runtimeBaseUrl = normalizeBaseUrl(CONFIG.baseUrl);
+const runtimeApiKeys: Record<ApiEnvironment, string> = {
+  production: DEFAULT_PRODUCTION_API_KEY,
+  staging: DEFAULT_STAGING_API_KEY,
+  custom: CONFIG.apiKey,
+};
+let runtimeApiEnvironment = resolveRuntimeApiEnvironment(runtimeBaseUrl);
+let runtimeApiKey = runtimeApiKeys[runtimeApiEnvironment];
+let client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
+
+function getConfiguredApiBaseUrl(targetEnvironment: ApiEnvironment): string | undefined {
+  if (targetEnvironment === 'production') return DEFAULT_PRODUCTION_BASE_URL;
+  if (targetEnvironment === 'staging' && DEFAULT_STAGING_BASE_URL) return normalizeBaseUrl(DEFAULT_STAGING_BASE_URL);
+  return undefined;
+}
+
+function getConfiguredApiKey(targetEnvironment: ApiEnvironment): string {
+  return runtimeApiKeys[targetEnvironment];
+}
+
+function switchApiEnvironment(targetBaseUrl: string, note?: string): string {
+  const normalizedBaseUrl = normalizeBaseUrl(targetBaseUrl);
+  try {
+    new URL(normalizedBaseUrl);
+  } catch {
+    return `❌ Could not switch API environment because "${targetBaseUrl}" is not a valid URL.`;
+  }
+
+  runtimeBaseUrl = normalizedBaseUrl;
+  runtimeApiEnvironment = resolveRuntimeApiEnvironment(runtimeBaseUrl);
+  runtimeApiKey = getConfiguredApiKey(runtimeApiEnvironment);
+  client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
+  const environment = runtimeApiEnvironment;
+  const suffix = note ? ` ${note}` : '';
+  if (!runtimeApiKey) {
+    return `✅ API ${environment} environment set to ${environment === 'custom' ? `(${runtimeBaseUrl})` : `(${normalizedBaseUrl})`}${suffix}, but no API key is configured for this environment. Set one with "set ${environment} API key to ...".`;
+  }
+  return `✅ API environment set to ${environment}${environment === 'custom' ? ` (${runtimeBaseUrl})` : ` (${normalizedBaseUrl})`}${suffix}.`;
+}
+
+function setRuntimeApiKey(targetApiKey: string, targetEnvironment?: ApiEnvironment): string {
+  const trimmedApiKey = targetApiKey.trim();
+  if (!trimmedApiKey) {
+    return '❌ Please provide an API key value.';
+  }
+
+  const effectiveEnvironment = targetEnvironment ?? runtimeApiEnvironment;
+  runtimeApiKeys[effectiveEnvironment] = trimmedApiKey;
+
+  if (effectiveEnvironment === runtimeApiEnvironment) {
+    runtimeApiKey = trimmedApiKey;
+    client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
+    return `✅ API key set for the active ${effectiveEnvironment} environment.`;
+  }
+
+  return `✅ API key saved for ${effectiveEnvironment}. It will be used when you switch to that environment.`;
+}
 
 export async function handleCommand(input: string): Promise<string> {
   const parsed = parseIntent(input);
@@ -1535,8 +1887,10 @@ export async function handleCommand(input: string): Promise<string> {
       if (!parsed.entities.itemId) {
         return '❌ Please specify which item to email (e.g., "email item 123 to user@example.com")';
       }
+      const resolvedRecipient = await resolveRecipientInput(parsed.entities.email, client);
+      if (resolvedRecipient.error) return resolvedRecipient.error;
       const result = await client.emailItem(parsed.entities.itemId, {
-        toEmail: parsed.entities.email,
+        toEmail: resolvedRecipient.toEmail,
         theme: parsed.entities.theme,
       });
       return formatResponse(result);
@@ -1707,6 +2061,34 @@ export async function handleCommand(input: string): Promise<string> {
     case 'api_version':
       return formatResponse(await client.getApiStatus('version'));
 
+    case 'set_api_environment': {
+      if (parsed.entities.apiBaseUrl) {
+        return switchApiEnvironment(parsed.entities.apiBaseUrl, 'using custom API URL');
+      }
+
+      const target = parsed.entities.apiEnvironment;
+      if (!target) {
+        return '❌ Please specify "production", "staging", or a full API URL (for example, "set API base URL to https://...").';
+      }
+
+      const configuredUrl = getConfiguredApiBaseUrl(target);
+      if (!configuredUrl) {
+        if (target === 'staging') {
+          return '❌ No staging API URL configured. Set LISTER_STAGING_BASE_URL and retry with "set API base URL to ...".';
+        }
+        return `❌ The ${target} API URL is not configured in environment variables.`;
+      }
+
+      return switchApiEnvironment(configuredUrl, `for ${target}`);
+    }
+
+    case 'set_api_key': {
+      if (!parsed.entities.apiKey) {
+        return '❌ Please provide an API key (for example, "set API key to your-key-here").';
+      }
+      return setRuntimeApiKey(parsed.entities.apiKey, parsed.entities.apiEnvironment);
+    }
+
     case 'export_list': {
       if (!parsed.entities.listName) {
         return '❌ Please specify which list to export (e.g., "export my today list as html")';
@@ -1736,8 +2118,10 @@ export async function handleCommand(input: string): Promise<string> {
       }
       const result = await resolveList(parsed.entities.listName);
       if ('error' in result) return result.error;
+      const resolvedRecipient = await resolveRecipientInput(parsed.entities.email, client);
+      if (resolvedRecipient.error) return resolvedRecipient.error;
       const emailResult = await client.emailList(result.list.id, {
-        toEmail: parsed.entities.email,
+        toEmail: resolvedRecipient.toEmail,
         theme: parsed.entities.theme,
         includeArchived: parsed.entities.includeArchived,
       });
@@ -1745,8 +2129,10 @@ export async function handleCommand(input: string): Promise<string> {
     }
 
     case 'email_priority': {
+      const resolvedRecipient = await resolveRecipientInput(parsed.entities.email, client);
+      if (resolvedRecipient.error) return resolvedRecipient.error;
       const result = await client.emailPriorityItems({
-        toEmail: parsed.entities.email,
+        toEmail: resolvedRecipient.toEmail,
         theme: parsed.entities.theme,
         includeArchived: parsed.entities.includeArchived,
       });
@@ -1944,7 +2330,9 @@ export async function handleCommand(input: string): Promise<string> {
         `• Mark item 123 as done\n` +
         `• Remove item 456\n` +
         `• Export my today list as html\n` +
+        `• Switch to production (or set staging)\n` +
         `• Search for meeting\n` +
+        `• Set API key to abc123\n` +
         `• List summary\n` +
         `• Archive my old project list\n` +
         `• Share my work list with user@example.com as edit\n` +
@@ -1961,6 +2349,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.log('  node dist/index.js add "call Notary" to my today list');
     console.log('  node dist/index.js get priority items');
     console.log('  node dist/index.js mark item 123 done');
+    console.log('  node dist/index.js switch to staging');
+    console.log('  node dist/index.js set API key to your-key-here');
     process.exit(1);
   }
 
