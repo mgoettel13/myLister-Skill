@@ -6,7 +6,7 @@ description: Natural language task and list management for MyLister through its 
 # Lister — Natural Language Task Management
 
 **Skill name:** `lister`
-**Description:** Natural language task management with Lister.ai — add, view, update, move, and organize to-do items across lists via conversational commands.
+**Description:** Natural language task management with MyLister.dev — add, view, update, move, and organize to-do items across lists via conversational commands.
 
 ## When to Use This Skill
 
@@ -575,7 +575,7 @@ The skill validates input before making API calls. Common validation messages:
 ## File Layout
 
 ```
-lister-skill/
+MyLister-Skill/
 ├── SKILL.md          ← This file (skill definition for OpenClaw)
 ├── skill.json        ← Skill metadata
 ├── src/

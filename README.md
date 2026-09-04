@@ -44,22 +44,22 @@ This repository is an [Agent Skills-compatible](https://agentskills.io/) skill. 
 Install the built skill into the shared OpenClaw skills directory:
 
 ```bash
-git clone https://github.com/mgoettel13/myList-Skill.git /tmp/myList-Skill
-cd /tmp/myList-Skill
+git clone https://github.com/mgoettel13/MyLister-Skill.git /tmp/MyLister-Skill
+cd /tmp/MyLister-Skill
 npm ci
 openclaw skills install . --as lister --global
 ```
 
 For a workspace-only install, omit `--global`. Start a new OpenClaw session, then ask naturally, for example: `Add "Call Mama" to my today list`.
 
-OpenClaw also supports `openclaw skills install git:mgoettel13/myList-Skill@main`, but a direct Git skill install does not run this repository's build step. Build first, then install the local directory as shown above. See the [OpenClaw skills documentation](https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md).
+OpenClaw also supports `openclaw skills install git:mgoettel13/MyLister-Skill@main`, but a direct Git skill install does not run this repository's build step. Build first, then install the local directory as shown above. See the [OpenClaw skills documentation](https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md).
 
 ### Hermes
 
 Hermes keeps installed skills in `~/.hermes/skills/`. Clone and build the skill there:
 
 ```bash
-git clone https://github.com/mgoettel13/myList-Skill.git ~/.hermes/skills/lister
+git clone https://github.com/mgoettel13/MyLister-Skill.git ~/.hermes/skills/lister
 cd ~/.hermes/skills/lister
 npm ci
 hermes skills list
@@ -72,7 +72,7 @@ Start a new Hermes session and use `/lister` or describe the task normally. Herm
 For the current repository, install it as a **standalone Codex skill**:
 
 ```bash
-git clone https://github.com/mgoettel13/myList-Skill.git "$CODEX_HOME/skills/lister"
+git clone https://github.com/mgoettel13/MyLister-Skill.git "$CODEX_HOME/skills/lister"
 cd "$CODEX_HOME/skills/lister"
 npm ci
 ```
@@ -84,7 +84,7 @@ If `CODEX_HOME` is not set, use the Codex skills directory shown by your install
 Claude Code supports project skills in `.claude/skills/` and personal skills in `~/.claude/skills/`. Install it for all projects with:
 
 ```bash
-git clone https://github.com/mgoettel13/myList-Skill.git ~/.claude/skills/lister
+git clone https://github.com/mgoettel13/MyLister-Skill.git ~/.claude/skills/lister
 cd ~/.claude/skills/lister
 npm ci
 ```

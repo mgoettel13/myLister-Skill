@@ -1,5 +1,5 @@
 /**
- * Lister Skill - OpenClaw integration for Lister.ai task management
+ * MyLister.dev Skill - OpenClaw integration for MyLister.dev task management
  *
  * Supports natural language commands:
  * - "Add 'call Notary' to my today list"
