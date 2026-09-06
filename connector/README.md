@@ -21,6 +21,9 @@ Access tokens expire after 10 minutes. Refresh tokens rotate and are bound to a
 Integration keys also expire after 30 days in the API. Disconnect, replay detection,
 and expiry revoke the underlying key; failed revocations remain durably queued and
 retry every 30 seconds. Connection records are not TTL-deleted before cleanup succeeds.
+Personal API keys and active integration connections have separate per-user quotas;
+connecting an app does not consume a personal-key slot. Integration credentials are
+managed through Connected Apps, not the personal API-key listing.
 
 ## Configuration
 

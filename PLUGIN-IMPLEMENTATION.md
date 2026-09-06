@@ -34,7 +34,7 @@
 - Plugin manifest and bundled skill validate. The package points only to staging.
 - All four Railway staging services reached `SUCCESS`. Current deployment evidence:
   connector `fcdf53a5-b649-4b93-8c41-92bd8ce708cc`, private API
-  `e5bb6df8-975c-4c20-af41-80fe037d8fe3`, public API
+  `1c7a511f-cd82-4297-b4df-a76b0136d13b`, public API
   `91c80b69-dc23-4449-a67f-2b8087db046d`, UI
   `734a1b16-e034-46e2-92e9-d52fd79c37b6`.
 - Live health, OAuth discovery, unauthenticated MCP rejection, and API version routes
@@ -51,10 +51,23 @@
   diagnostics and a regression test for the configured Railway Host, service secret,
   and rejection of browser Origin on internal consent routes. The original rejected
   Host was not logged, so its exact cause is not established.
-- Consent has NOT been approved. Action-time user confirmation is pending; the CLI
-  callback wait timed out without receiving a code. Start a fresh login after approval.
-  Live authenticated tool-family tests, two-account permissions, deployed revocation,
-  and restart tests remain outstanding. No production readiness is claimed.
+- User-approved browser consent and the native Codex OAuth callback succeeded on
+  2026-09-06. `codex mcp list` reports `o_auth`. An ephemeral Codex run using the
+  installed plugin successfully called `version` and `get_lists_summary` on staging.
+  The Connected Apps settings view displays Codex, its expiry, and Disconnect.
+- Live consent exposed a quota collision with three existing personal keys. API
+  commit `a79ff2f` gives personal keys and integration connections independent quotas
+  using the existing per-user limit. Expired connections do not consume the active
+  integration quota. Personal key listings exclude integration credentials; legacy
+  keys still count as personal. Fifty focused auth/key/consent tests pass, and the
+  deployed fix allowed authorization without deleting or replacing existing keys.
+- Full authenticated tool-family coverage, two-account permissions, deployed
+  revocation, and restart tests remain in progress. No production readiness is claimed.
+- Installed-plugin core write regression passed with temporary standard, notebook,
+  and project lists: exact journal whitespace, item creation, priority-only update,
+  priority query, initial notes, note creation, and note editing. All three test lists
+  were deleted and each subsequent `get_list` returned 404. See
+  `connector/STAGING-VERIFICATION.md` for the test procedure and evidence limits.
 - Existing local staging commits `a152211` (API welcome email) and `0a5926b` (UI item
   editing) were previously deployed but are not published. Preserve them in deployment-only
   worktrees without including them in plugin feature-branch pushes.
