@@ -64,6 +64,11 @@ tool discovery, and revocation against the real SDK and Mongo store.
 The deployment Dockerfile is rooted in this directory. `/health` is the healthcheck;
 the authenticated Streamable HTTP endpoint is `/mcp`.
 
+Run `node scripts/smoke-staging.mjs` for eight read-only checks against the fixed
+staging deployment: health, OAuth/PKCE and resource metadata, MCP authentication,
+Origin rejection, protected internal routes, and the API-key-only public boundary.
+This script creates no accounts or grants and does not replace authenticated tests.
+
 ## Public API Contract
 
 `contracts/public-openapi.json` is a pinned snapshot of the public `/v1` contract.

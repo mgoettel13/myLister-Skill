@@ -39,6 +39,9 @@
   `734a1b16-e034-46e2-92e9-d52fd79c37b6`.
 - Live health, OAuth discovery, unauthenticated MCP rejection, and API version routes
   were verified. The issuer includes its trailing slash; the resource is `/mcp`.
+- The committed read-only `connector/scripts/smoke-staging.mjs` passes all eight
+  deployed checks, including rejected OAuth bearer authentication on public data
+  endpoints and rejected unauthenticated connector-internal requests.
 - The staging plugin is installed locally as `mylister@personal`, version
   `0.1.0-staging.1`. `codex mcp login mylister --oauth-client-registration dcr
   --scopes mylister` registered successfully and reached the existing signed-in
