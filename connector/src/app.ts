@@ -26,7 +26,10 @@ export function createApp(provider: MyListerOAuthProvider, config: ConnectorConf
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'mylister-connector', version: '0.1.0' }));
   app.use((req, res, next) => {
-    if (!config.allowedHosts.includes(req.headers.host ?? '')) { res.status(421).json({ error: 'Invalid host' }); return; }
+    if (!config.allowedHosts.includes(req.headers.host ?? '')) {
+      console.warn('Rejected connector host', JSON.stringify({ received: (req.headers.host ?? '').slice(0, 300), allowed: config.allowedHosts }));
+      res.status(421).json({ error: 'Invalid host' }); return;
+    }
     next();
   });
   const authOptions = {

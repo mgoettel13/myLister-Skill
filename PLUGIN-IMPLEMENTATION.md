@@ -24,7 +24,7 @@
 - API integration-key boundary and interactive consent endpoints implemented; 84 focused
   auth, key, consent, and surface tests pass locally. Integration keys have a 30-day lifetime.
 - Connector encrypted credential vault, Mongo persistence, SDK OAuth provider, durable
-  upstream-key revocation, and retry worker implemented. Twenty unit tests pass.
+  upstream-key revocation, and retry worker implemented. Twenty-one unit tests pass.
 - A real Atlas test passed in a disposable database: atomic grants, persisted records,
   retained cleanup obligations, HTTP registration/consent/PKCE exchange, MCP initialize,
   58-tool discovery, and rejected access after revocation. The test database was removed.
@@ -32,18 +32,34 @@
 - MyLister UI consent page and Settings connected-app controls implemented; production
   build and typecheck passed. Native Codex callbacks support strict loopback URLs.
 - Plugin manifest and bundled skill validate. The package points only to staging.
-- Railway staging connector created: `e26ca418-2a63-449b-80b4-c8e4c3f70362`, with domain
-  `mylister-connector-staging.up.railway.app`. Configuration is set with deploys skipped.
-- Deployment, actual browser login/consent, installed Codex behavior, and live tool-family
-  coverage remain in progress. No production readiness or publication is claimed.
+- All four Railway staging services reached `SUCCESS`. Current deployment evidence:
+  connector `fcdf53a5-b649-4b93-8c41-92bd8ce708cc`, private API
+  `e5bb6df8-975c-4c20-af41-80fe037d8fe3`, public API
+  `91c80b69-dc23-4449-a67f-2b8087db046d`, UI
+  `734a1b16-e034-46e2-92e9-d52fd79c37b6`.
+- Live health, OAuth discovery, unauthenticated MCP rejection, and API version routes
+  were verified. The issuer includes its trailing slash; the resource is `/mcp`.
+- The staging plugin is installed locally as `mylister@personal`, version
+  `0.1.0-staging.1`. `codex mcp login mylister --oauth-client-registration dcr
+  --scopes mylister` registered successfully and reached the existing signed-in
+  MyLister consent page through the deployed private API.
+- The first live consent attempt received an internal HTTP 421. Redeploying the
+  connector resolved it without relaxing Host or secret checks. Added secret-safe
+  diagnostics and a regression test for the configured Railway Host, service secret,
+  and rejection of browser Origin on internal consent routes. The original rejected
+  Host was not logged, so its exact cause is not established.
+- Consent has NOT been approved. Action-time user confirmation is pending; the CLI
+  callback wait timed out without receiving a code. Start a fresh login after approval.
+  Live authenticated tool-family tests, two-account permissions, deployed revocation,
+  and restart tests remain outstanding. No production readiness is claimed.
 - Existing local staging commits `a152211` (API welcome email) and `0a5926b` (UI item
   editing) were previously deployed but are not published. Preserve them in deployment-only
   worktrees without including them in plugin feature-branch pushes.
 - Staging API is reachable at `https://lister-api-public-staging.up.railway.app`.
   `api-beta.mylister.dev` currently fails certificate-name validation. Keep TLS verification
-  enabled. The live version suffix `e13541f` is the current Railway deployment ID prefix,
-  not evidence of a conflicting Git commit. Its deployment metadata has no source SHA;
-  inspect the deployment source before replacing it.
+  enabled. Version suffixes in these local-upload deployments are Railway deployment
+  ID prefixes, not Git commit hashes. Combined deployment builds preserve the existing
+  local changes; 89 focused API tests and the combined UI production build passed.
 
 ## Connection design
 

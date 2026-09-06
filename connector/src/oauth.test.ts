@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes, createHash } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { test } from 'node:test';
 import express from 'express';
 import type { Response } from 'express';
@@ -7,6 +8,8 @@ import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { MyListerOAuthProvider } from './oauth.js';
 import { CredentialVault, digest } from './vault.js';
 import type { GrantStore, RecordEntry } from './store.js';
+import { loadConfig } from './config.js';
+import { createApp } from './app.js';
 
 class MemoryStore implements GrantStore {
   readonly records = new Map<string, RecordEntry>();
@@ -214,4 +217,40 @@ test('SDK token endpoint enforces PKCE before consuming authorization code', asy
   assert.equal(accepted.status, 200);
   const tokens = await accepted.json() as { access_token: string };
   assert.equal(await f.provider.upstreamCredential(tokens.access_token), 'lister_test-user-one');
+});
+
+test('Railway internal consent requires both the configured Host and service credential', async t => {
+  const f = await fixture();
+  const config = loadConfig({
+    CONNECTOR_PUBLIC_URL: 'https://connector.example', MYLISTER_PUBLIC_API_URL: 'https://api.example',
+    MYLISTER_PRIVATE_API_URL: 'http://api.railway.internal:80',
+    MYLISTER_CONSENT_URL: 'https://app.example/integrations/authorize',
+    OAUTH_ALLOWED_REDIRECT_URIS: JSON.stringify([redirectUri]),
+    MYLISTER_CONNECTOR_SECRET: 'test-service-secret-with-at-least-32-bytes',
+    CREDENTIAL_ENCRYPTION_KEY: randomBytes(32).toString('base64'), MONGODB_URL: 'mongodb://localhost',
+    MONGODB_DATABASE: 'test', RAILWAY_PRIVATE_DOMAIN: 'connector.railway.internal', PORT: '8080',
+  });
+  assert.deepEqual(config.allowedHosts, ['connector.example', 'connector.railway.internal:8080']);
+  const server = createApp(f.provider, config).listen(0, '127.0.0.1');
+  await new Promise<void>(resolve => server.once('listening', resolve));
+  t.after(() => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const pending = await f.begin();
+  const get = (host: string, secret?: string, origin?: string) => new Promise<number>((resolve, reject) => {
+    const headers: Record<string, string> = { Host: host };
+    if (secret) headers['X-Connector-Secret'] = secret;
+    if (origin) headers.Origin = origin;
+    const req = httpRequest({ hostname: '127.0.0.1', port: address.port,
+      path: `/internal/consent/${pending}`, headers }, res => {
+      res.resume();
+      res.on('end', () => resolve(res.statusCode!));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+  assert.equal(await get('connector.railway.internal:8080', config.sharedSecret), 200);
+  assert.equal(await get('connector.railway.internal:8080'), 401);
+  assert.equal(await get('connector.railway.internal:8080', config.sharedSecret, 'https://app.example'), 401);
+  assert.equal(await get('untrusted.example', config.sharedSecret), 421);
 });
