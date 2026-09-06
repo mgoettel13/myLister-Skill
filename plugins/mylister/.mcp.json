@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mylister": {
+      "type": "http",
+      "url": "https://mylister-connector-staging.up.railway.app/mcp"
+    }
+  }
+}

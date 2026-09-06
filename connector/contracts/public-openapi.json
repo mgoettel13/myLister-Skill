@@ -1,0 +1,5443 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MyLister API",
+    "description": "Backend for MyLister app (public surface)",
+    "version": "0.9.0+e13541f"
+  },
+  "paths": {
+    "/v1/search": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Search",
+        "description": "Global search across all lists and items accessible to the current user.",
+        "operationId": "search_v1_search_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          },
+          {
+            "name": "include_notes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Notes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Search V1 Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/upload/image": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Upload Image",
+        "description": "Upload an image file to S3 storage.\n\nArgs:\n    file: The image file to upload\n    description: Optional user-provided description of the image\n    list_id: Optional list ID to associate the image with\n    item_id: Optional item ID to associate the image with\n    context_item_id: Optional item ID used to authorize a note image",
+        "operationId": "upload_image_v1_upload_image_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_image_v1_upload_image_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Upload Image V1 Upload Image Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/items/{item_id}/attachments": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Upload Item Attachment",
+        "description": "Upload a generic file attachment to an item.",
+        "operationId": "upload_item_attachment_v1_items__item_id__attachments_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_item_attachment_v1_items__item_id__attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload Item Attachment V1 Items  Item Id  Attachments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/attachments/{attachment_id}": {
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Item Attachment",
+        "description": "Delete a file attachment from an item.",
+        "operationId": "delete_item_attachment_v1_items__item_id__attachments__attachment_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Item Attachment V1 Items  Item Id  Attachments  Attachment Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}/attachments": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Upload Note Attachment",
+        "description": "Upload a generic file attachment to an embedded item note.",
+        "operationId": "upload_note_attachment_v1_items__item_id__notes__note_id__attachments_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_note_attachment_v1_items__item_id__notes__note_id__attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload Note Attachment V1 Items  Item Id  Notes  Note Id  Attachments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}/attachments/{attachment_id}": {
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Note Attachment",
+        "description": "Delete a generic file attachment from an embedded item note.",
+        "operationId": "delete_note_attachment_v1_items__item_id__notes__note_id__attachments__attachment_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Note Attachment V1 Items  Item Id  Notes  Note Id  Attachments  Attachment Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/presigned": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get File Url Query",
+        "description": "Generate a direct file URL using a query parameter-safe route.",
+        "operationId": "get_file_url_query_v1_files_presigned_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "File Key"
+            }
+          },
+          {
+            "name": "expires_in",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 86400,
+              "minimum": 60,
+              "default": 900,
+              "title": "Expires In"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{file_key}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get File",
+        "description": "Retrieve a file from S3 storage.\n\nArgs:\n    file_key: The S3 object key (e.g., 'images/users/.../filename')",
+        "operationId": "get_file_v1_files__file_key__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{file_key}/stream": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Stream File",
+        "description": "Stream a file from S3 storage (useful for large audio files).\n\nArgs:\n    file_key: The S3 object key (e.g., 'voice/users/.../filename')",
+        "operationId": "stream_file_v1_files__file_key__stream_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{file_key}/url": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get File Url",
+        "description": "Generate a presigned URL for direct file access.\n\nArgs:\n    file_key: The S3 object key (e.g., 'images/users/.../filename')\n    expires_in: URL expiration time in seconds (default 3600, min 60, max 86400)\n    \nReturns:\n    dict: {url, expiresIn}",
+        "operationId": "get_file_url_v1_files__file_key__url_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Key"
+            }
+          },
+          {
+            "name": "expires_in",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 86400,
+              "minimum": 60,
+              "default": 3600,
+              "title": "Expires In"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/upload/voice": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Upload Voice",
+        "description": "Upload a voice recording to S3 storage.\n\nIf transcribe=True, also transcribes the audio using the server's ElevenLabs API key from environment variables.\n\nArgs:\n    file: The voice file to upload\n    duration: Optional audio duration in seconds\n    transcribe: Whether to transcribe the audio (requires ElevenLabs API key)\n    list_id: Optional list ID to associate the voice with\n    item_id: Optional item ID to associate the voice with\n    \nReturns:\n    dict: {fileKey, duration, mimeType, transcription?}",
+        "operationId": "upload_voice_v1_upload_voice_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_voice_v1_upload_voice_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Upload Voice V1 Upload Voice Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/lists": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Create List",
+        "description": "Create a new list.",
+        "operationId": "create_list_v1_lists_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create List V1 Lists Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get User Lists",
+        "description": "Get all lists for the current user (owned and shared).\n\nQuery params:\n- includeArchived: If true, include archived lists (default: false)",
+        "operationId": "get_user_lists_v1_lists_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived lists in results",
+              "default": false,
+              "title": "Includearchived"
+            },
+            "description": "Include archived lists in results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get User Lists V1 Lists Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/defaults": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Create Default Lists Endpoint",
+        "description": "Create default starter lists and items for the current user.\n\nIdempotent - skips lists that already exist by name.",
+        "operationId": "create_default_lists_endpoint_v1_lists_defaults_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Default Lists Endpoint V1 Lists Defaults Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/lists/summary": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Lists Summary",
+        "description": "Get enriched list data for the summary page.\n\nReturns all lists with computed noteCount via aggregation.\nThis is separate from GET /api/lists to avoid slowing down\nthe home page with aggregation overhead.",
+        "operationId": "get_lists_summary_v1_lists_summary_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived lists",
+              "default": false,
+              "title": "Includearchived"
+            },
+            "description": "Include archived lists"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Lists Summary V1 Lists Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/home/bootstrap": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Home Bootstrap",
+        "description": "Return the Home page's lists, limited items, collaborators, and direct media URLs.\n\nThis replaces the browser-side N+1 fan-out of one item request per list and one\ncollaborator request per project. Full list/item endpoints remain unchanged for\ndetail pages and editing flows.",
+        "operationId": "get_home_bootstrap_v1_home_bootstrap_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Maximum active items returned per list",
+              "default": 7,
+              "title": "Itemlimit"
+            },
+            "description": "Maximum active items returned per list"
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived items in the bootstrap payload",
+              "default": false,
+              "title": "Includearchived"
+            },
+            "description": "Include archived items in the bootstrap payload"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Home Bootstrap V1 Home Bootstrap Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/home/mobile-bootstrap": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Mobile Home Bootstrap",
+        "description": "Return the compact lists, capture, focus, and artwork data native Home renders.",
+        "operationId": "get_mobile_home_bootstrap_v1_home_mobile_bootstrap_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recentLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "description": "Newest active Quick Takes returned",
+              "default": 3,
+              "title": "Recentlimit"
+            },
+            "description": "Newest active Quick Takes returned"
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived lists in the native Home payload",
+              "default": false,
+              "title": "Includearchived"
+            },
+            "description": "Include archived lists in the native Home payload"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileHomeBootstrapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/reorder": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Reorder Lists",
+        "description": "Reorder lists for the current user.\n\nNote: Only owned lists can be reordered. Shared lists maintain their own order per-user.\n\nRequest body: { \"order\": [\"list-id-1\", \"list-id-2\", ...] }\nUpdates the order field for each list based on its position in the array.",
+        "operationId": "reorder_lists_v1_lists_reorder_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderListsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reorder Lists V1 Lists Reorder Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/lists/{list_id}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get List",
+        "description": "Get a specific list by ID.",
+        "operationId": "get_list_v1_lists__list_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get List V1 Lists  List Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update List",
+        "description": "Update a list.",
+        "operationId": "update_list_v1_lists__list_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update List V1 Lists  List Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete List",
+        "description": "Delete a list and all its items.",
+        "operationId": "delete_list_v1_lists__list_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete List V1 Lists  List Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/pin": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Set List Pin",
+        "description": "Set the current user's personal pin state for an accessible list.",
+        "operationId": "set_list_pin_v1_lists__list_id__pin_put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinnedListUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Set List Pin V1 Lists  List Id  Pin Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/share": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Share List With User",
+        "description": "Share a list with another user.\n\nRequires ADMIN permission.\nMax 5 users per list.",
+        "operationId": "share_list_with_user_v1_lists__list_id__share_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserListCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Share List With User V1 Lists  List Id  Share Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/users": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get List Users",
+        "description": "Get all users with access to a list.\n\nRequires READ permission.\nReturns user details (name, email) for UI display.",
+        "operationId": "get_list_users_v1_lists__list_id__users_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get List Users V1 Lists  List Id  Users Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/users/{user_id}": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update User Permission",
+        "description": "Update a user's permission on a shared list.\n\nRequires ADMIN permission.\nCannot modify owner's permission.",
+        "operationId": "update_user_permission_v1_lists__list_id__users__user_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPermissionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update User Permission V1 Lists  List Id  Users  User Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Remove User From List",
+        "description": "Remove a user from a shared list.\n\nRequires ADMIN permission.\nTransfers user's items to list owner.\nIf removing owner, transfer ownership first or fail.\nIf last user, delete the list entirely.",
+        "operationId": "remove_user_from_list_v1_lists__list_id__users__user_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Remove User From List V1 Lists  List Id  Users  User Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/archive": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Archive List",
+        "description": "Archive or unarchive a list.\n\nRequest body: { \"archived\": true } or { \"archived\": false }",
+        "operationId": "archive_list_v1_lists__list_id__archive_put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Archive Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Archive List V1 Lists  List Id  Archive Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/items": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Create Item",
+        "description": "Create a new item in a list.",
+        "operationId": "create_item_v1_lists__list_id__items_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Item V1 Lists  List Id  Items Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get List Items",
+        "description": "Get all items in a list.\n\nQuery params:\n- includeArchived: If true, include archived items (default: false)",
+        "operationId": "get_list_items_v1_lists__list_id__items_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived items in results",
+              "default": false,
+              "title": "Includearchived"
+            },
+            "description": "Include archived items in results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get List Items V1 Lists  List Id  Items Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/items/reorder": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Reorder Items",
+        "description": "Reorder items within a list.\n\nRequest body: { \"order\": [\"item-id-1\", \"item-id-2\", ...] }\nUpdates the order field for each item based on its position in the array.",
+        "operationId": "reorder_items_v1_lists__list_id__items_reorder_put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderItemsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Items V1 Lists  List Id  Items Reorder Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/items/move-completed": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Move Completed Items",
+        "description": "Move all completed items to the bottom of the list.\n\nThis endpoint finds completed items that are above non-completed items and reorders them\nso all completed items are at the bottom of the list.",
+        "operationId": "move_completed_items_v1_lists__list_id__items_move_completed_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Move Completed Items V1 Lists  List Id  Items Move Completed Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/priority": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Priority Items",
+        "description": "Get all priority items for the current user with list information.\n\nIncludes items from both owned lists and shared lists.",
+        "operationId": "get_priority_items_v1_items_priority_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Priority Items V1 Items Priority Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/items/{item_id}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Item",
+        "description": "Get a single item by its ID.",
+        "operationId": "get_item_v1_items__item_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Item V1 Items  Item Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update Item",
+        "description": "Update an item.",
+        "operationId": "update_item_v1_items__item_id__patch",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Item V1 Items  Item Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Item",
+        "description": "Delete an item.",
+        "operationId": "delete_item_v1_items__item_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Item V1 Items  Item Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/move": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Move Item",
+        "description": "Move an item to a different list.",
+        "operationId": "move_item_v1_items__item_id__move_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Move Item V1 Items  Item Id  Move Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/image": {
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Item Image",
+        "description": "Remove the attached image from an item.\n\nDeletes the image object from S3 (if present) and clears the image-related\nmetadata fields on the item. The item itself is preserved.",
+        "operationId": "delete_item_image_v1_items__item_id__image_delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Item Image V1 Items  Item Id  Image Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Add Item Note",
+        "description": "Add a note to an item.",
+        "operationId": "add_item_note_v1_items__item_id__notes_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Note Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Add Item Note V1 Items  Item Id  Notes Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update Item Note",
+        "description": "Update a note on an item.",
+        "operationId": "update_item_note_v1_items__item_id__notes__note_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Note Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Item Note V1 Items  Item Id  Notes  Note Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Item Note",
+        "description": "Delete a note from an item.",
+        "operationId": "delete_item_note_v1_items__item_id__notes__note_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Item Note V1 Items  Item Id  Notes  Note Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/reorder": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Reorder Notes",
+        "description": "Reorder notes within an item.\n\nRequest body: { \"order\": [\"note-id-1\", \"note-id-2\", ...] }",
+        "operationId": "reorder_notes_v1_items__item_id__notes_reorder_put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Request Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Notes V1 Items  Item Id  Notes Reorder Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}/status": {
+      "patch": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update Note Status",
+        "description": "Update the status of a specific note.\n\nBusiness Logic:\n- If setting status to 'complete' and parent item.status is 'new',\n  automatically promote item to 'in-progress'",
+        "operationId": "update_note_status_v1_items__item_id__notes__note_id__status_patch",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Note Status V1 Items  Item Id  Notes  Note Id  Status Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/comments": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Add Item Comment",
+        "description": "Add a comment to an item (shared-list collaborative comments).",
+        "operationId": "add_item_comment_v1_items__item_id__comments_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Comment Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Add Item Comment V1 Items  Item Id  Comments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Item Comments",
+        "description": "List all comments on an item (with author info populated).",
+        "operationId": "get_item_comments_v1_items__item_id__comments_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Item Comments V1 Items  Item Id  Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/comments/{comment_id}": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update Item Comment",
+        "description": "Update a comment on an item.",
+        "operationId": "update_item_comment_v1_items__item_id__comments__comment_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Comment Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Item Comment V1 Items  Item Id  Comments  Comment Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Item Comment",
+        "description": "Delete a comment from an item.",
+        "operationId": "delete_item_comment_v1_items__item_id__comments__comment_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Item Comment V1 Items  Item Id  Comments  Comment Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}/comments": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Add Note Comment",
+        "description": "Add a comment to a note (shared-list collaborative comments).",
+        "operationId": "add_note_comment_v1_items__item_id__notes__note_id__comments_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Comment Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Add Note Comment V1 Items  Item Id  Notes  Note Id  Comments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get Note Comments",
+        "description": "List all comments on a note (with author info populated).",
+        "operationId": "get_note_comments_v1_items__item_id__notes__note_id__comments_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Note Comments V1 Items  Item Id  Notes  Note Id  Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/notes/{note_id}/comments/{comment_id}": {
+      "put": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Update Note Comment",
+        "description": "Update a comment on a note.",
+        "operationId": "update_note_comment_v1_items__item_id__notes__note_id__comments__comment_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          },
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Comment Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Note Comment V1 Items  Item Id  Notes  Note Id  Comments  Comment Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Delete Note Comment",
+        "description": "Delete a comment from a note.",
+        "operationId": "delete_note_comment_v1_items__item_id__notes__note_id__comments__comment_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          },
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Note Comment V1 Items  Item Id  Notes  Note Id  Comments  Comment Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/export": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export List",
+        "description": "Export a list and its items as a JSON or HTML file download.\n\nRequires READ permission on the list.",
+        "operationId": "export_list_v1_lists__list_id__export_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lists/{list_id}/export/email": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export List Email",
+        "description": "Export a list as HTML and send it via email.\n\nRequires READ permission on the list.",
+        "operationId": "export_list_email_v1_lists__list_id__export_email_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/priority/export": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export Priority Items",
+        "description": "Export priority items for the current user as a JSON or HTML file download.",
+        "operationId": "export_priority_items_v1_items_priority_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportPriorityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/items/priority/export/email": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export Priority Items Email",
+        "description": "Email priority items export to the user as HTML attachment.",
+        "operationId": "export_priority_items_email_v1_items_priority_export_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportPriorityEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/items/{item_id}/export": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export Item",
+        "description": "Export a single item as a JSON or HTML file download.",
+        "operationId": "export_item_v1_items__item_id__export_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{item_id}/export/email": {
+      "post": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Export Item Email",
+        "description": "Export a single item as HTML and send it via email.",
+        "operationId": "export_item_email_v1_items__item_id__export_email_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportItemEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "Health",
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/version": {
+      "get": {
+        "tags": [
+          "Health",
+          "Health"
+        ],
+        "summary": "Version",
+        "description": "Return deployed application version metadata.",
+        "operationId": "version_v1_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/": {
+      "get": {
+        "tags": [
+          "Health",
+          "Health"
+        ],
+        "summary": "Root",
+        "description": "Root endpoint with API information.",
+        "operationId": "root_v1__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_upload_image_v1_upload_image_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "list_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Id"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "context_item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Item Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_image_v1_upload_image_post"
+      },
+      "Body_upload_item_attachment_v1_items__item_id__attachments_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_item_attachment_v1_items__item_id__attachments_post"
+      },
+      "Body_upload_note_attachment_v1_items__item_id__notes__note_id__attachments_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_note_attachment_v1_items__item_id__notes__note_id__attachments_post"
+      },
+      "Body_upload_voice_v1_upload_voice_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "transcribe": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcribe",
+            "default": false
+          },
+          "list_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Id"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_voice_v1_upload_voice_post"
+      },
+      "ExportEmailRequest": {
+        "properties": {
+          "toEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toemail",
+            "description": "Recipient email. Defaults to current user's email if omitted."
+          },
+          "toName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toname",
+            "description": "Recipient display name used in the email."
+          },
+          "contactId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contactid",
+            "description": "Owner-scoped saved contact to email."
+          },
+          "recipientUserId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipientuserid",
+            "description": "Active MyLister member to email without granting access."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme.",
+            "default": "light"
+          },
+          "includeArchived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includearchived",
+            "description": "Whether to include archived items.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExportEmailRequest",
+        "description": "Request model for emailing a list export."
+      },
+      "ExportFormat": {
+        "type": "string",
+        "enum": [
+          "json",
+          "html"
+        ],
+        "title": "ExportFormat",
+        "description": "Supported export formats."
+      },
+      "ExportItemEmailRequest": {
+        "properties": {
+          "toEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toemail",
+            "description": "Recipient email. Defaults to current user's email if omitted."
+          },
+          "toName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toname",
+            "description": "Recipient display name used in the email."
+          },
+          "contactId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contactid",
+            "description": "Owner-scoped saved contact to email."
+          },
+          "recipientUserId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipientuserid",
+            "description": "Active MyLister member to email without granting access."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme.",
+            "default": "light"
+          }
+        },
+        "type": "object",
+        "title": "ExportItemEmailRequest",
+        "description": "Request model for emailing a single item export."
+      },
+      "ExportItemRequest": {
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Filename without extension. If omitted, uses the item content."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme. Ignored for JSON exports.",
+            "default": "light"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "title": "ExportItemRequest",
+        "description": "Request model for exporting a single item."
+      },
+      "ExportListRequest": {
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Filename without extension. If omitted, uses the list name."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme. Ignored for JSON exports.",
+            "default": "light"
+          },
+          "includeArchived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includearchived",
+            "description": "Whether to include archived items in the export.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "title": "ExportListRequest",
+        "description": "Request model for exporting a list."
+      },
+      "ExportPriorityEmailRequest": {
+        "properties": {
+          "toEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toemail",
+            "description": "Recipient email. Defaults to current user's email if omitted."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme.",
+            "default": "light"
+          },
+          "includeArchived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includearchived",
+            "description": "Whether to include archived items.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExportPriorityEmailRequest",
+        "description": "Request model for emailing a priority items export."
+      },
+      "ExportPriorityRequest": {
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Filename without extension. If omitted, uses a default name."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportTheme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HTML theme. Ignored for JSON exports.",
+            "default": "light"
+          },
+          "includeArchived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includearchived",
+            "description": "Whether to include archived items in the export.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "title": "ExportPriorityRequest",
+        "description": "Request model for exporting priority items across all lists."
+      },
+      "ExportTheme": {
+        "type": "string",
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "title": "ExportTheme",
+        "description": "HTML export themes."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ItemAttachment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileKey": {
+            "type": "string",
+            "title": "Filekey"
+          },
+          "originalName": {
+            "type": "string",
+            "title": "Originalname"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Size"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "document"
+          },
+          "uploadedBy": {
+            "type": "string",
+            "title": "Uploadedby"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploadedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fileKey",
+          "originalName",
+          "mimeType",
+          "size",
+          "uploadedBy"
+        ],
+        "title": "ItemAttachment"
+      },
+      "ItemComment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ItemComment"
+      },
+      "ItemCreate": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "^(text|voice|image)$",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "pattern": "^(new|in-progress|complete)$",
+            "title": "Status"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ItemNoteCreate"
+                },
+                {
+                  "$ref": "#/components/schemas/ItemNote"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "comments": {
+            "items": {
+              "$ref": "#/components/schemas/ItemComment"
+            },
+            "type": "array",
+            "title": "Comments"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
+          },
+          "isPriority": {
+            "type": "boolean",
+            "title": "Ispriority",
+            "description": "Mark item as priority",
+            "default": false
+          },
+          "reminder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemReminder"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Scheduled reminder for this item"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectItemData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/ItemAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "type",
+          "status"
+        ],
+        "title": "ItemCreate"
+      },
+      "ItemMetadata": {
+        "properties": {
+          "originalVoiceUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalvoiceurl"
+          },
+          "voiceFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voicefileid"
+          },
+          "imageFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagefileid"
+          },
+          "imageDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagedescription"
+          },
+          "aiDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aidescription"
+          },
+          "transcription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcription"
+          },
+          "fileSize": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filesize"
+          },
+          "mimeType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mimetype"
+          },
+          "voiceDuration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voiceduration"
+          }
+        },
+        "type": "object",
+        "title": "ItemMetadata"
+      },
+      "ItemNote": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "complete"
+            ],
+            "title": "Status",
+            "default": "new"
+          },
+          "imageFileIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Imagefileids",
+            "description": "S3 object keys for attached images (max 5)"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/ItemNoteAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "comments": {
+            "items": {
+              "$ref": "#/components/schemas/ItemNoteComment"
+            },
+            "type": "array",
+            "title": "Comments"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ItemNote"
+      },
+      "ItemNoteAttachment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileKey": {
+            "type": "string",
+            "title": "Filekey"
+          },
+          "originalName": {
+            "type": "string",
+            "title": "Originalname"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Size"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "document"
+          },
+          "uploadedBy": {
+            "type": "string",
+            "title": "Uploadedby"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploadedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fileKey",
+          "originalName",
+          "mimeType",
+          "size",
+          "uploadedBy"
+        ],
+        "title": "ItemNoteAttachment",
+        "description": "Generic file attached to an embedded item note."
+      },
+      "ItemNoteComment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ItemNoteComment"
+      },
+      "ItemNoteCreate": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "imageFileIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Imagefileids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ItemNoteCreate",
+        "description": "Client-controlled fields allowed when creating a note with an item."
+      },
+      "ItemReminder": {
+        "properties": {
+          "remindAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Remindat",
+            "description": "When to fire NEXT (UTC)"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone",
+            "description": "User tz at creation, for display + recurring local-time anchoring"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Snapshot of item content for the notification body"
+          },
+          "sent": {
+            "type": "boolean",
+            "title": "Sent",
+            "description": "Whether the current occurrence was delivered",
+            "default": false
+          },
+          "sentAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentat",
+            "description": "When the last occurrence was sent"
+          },
+          "deliveredVia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliveredvia",
+            "description": "push | email | both"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "recurrence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReminderRecurrence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recurrence rules. null/absent = one-shot reminder."
+          }
+        },
+        "type": "object",
+        "required": [
+          "remindAt"
+        ],
+        "title": "ItemReminder",
+        "description": "A scheduled reminder on an item. Can be one-shot or recurring."
+      },
+      "ItemUpdate": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(new|in-progress|complete)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "isPriority": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ispriority"
+          },
+          "reminder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemReminder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectItemData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ItemUpdate"
+      },
+      "ListCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "imageFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagefileid"
+          },
+          "imageDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagedescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color",
+            "default": "#3B82F6"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon",
+            "default": "📝"
+          },
+          "permanent": {
+            "type": "boolean",
+            "title": "Permanent",
+            "default": false
+          },
+          "type": {
+            "$ref": "#/components/schemas/ListType",
+            "description": "List behaviour: 'standard' (tasks) or 'notebook' (journal)",
+            "default": "standard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ListCreate"
+      },
+      "ListType": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "notebook",
+          "project"
+        ],
+        "title": "ListType",
+        "description": "Whether a list behaves like a task list or a notebook/journal."
+      },
+      "ListUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "imageFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagefileid"
+          },
+          "imageDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagedescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
+          "permanent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permanent"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ListUpdate"
+      },
+      "MobileHomeBootstrapData": {
+        "properties": {
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/MobileHomeListResponse"
+            },
+            "type": "array",
+            "title": "Lists"
+          },
+          "quickTakesListId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quicktakeslistid"
+          },
+          "recentItems": {
+            "items": {
+              "$ref": "#/components/schemas/MobileHomeRecentItemResponse"
+            },
+            "type": "array",
+            "title": "Recentitems"
+          },
+          "focus": {
+            "$ref": "#/components/schemas/MobileHomeFocusResponse"
+          },
+          "mediaUrls": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Mediaurls"
+          },
+          "mediaThumbnailUrls": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Mediathumbnailurls"
+          },
+          "mediaExpiresIn": {
+            "type": "integer",
+            "title": "Mediaexpiresin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lists",
+          "recentItems",
+          "focus",
+          "mediaUrls",
+          "mediaThumbnailUrls",
+          "mediaExpiresIn"
+        ],
+        "title": "MobileHomeBootstrapData"
+      },
+      "MobileHomeBootstrapResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/MobileHomeBootstrapData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "MobileHomeBootstrapResponse"
+      },
+      "MobileHomeFocusResponse": {
+        "properties": {
+          "priorityCount": {
+            "type": "integer",
+            "title": "Prioritycount",
+            "default": 0
+          },
+          "reminderCount": {
+            "type": "integer",
+            "title": "Remindercount",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "MobileHomeFocusResponse"
+      },
+      "MobileHomeListResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "imageFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagefileid"
+          },
+          "imageDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagedescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "itemCount": {
+            "type": "integer",
+            "title": "Itemcount",
+            "default": 0
+          },
+          "completedCount": {
+            "type": "integer",
+            "title": "Completedcount",
+            "default": 0
+          },
+          "archivedCount": {
+            "type": "integer",
+            "title": "Archivedcount",
+            "default": 0
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order",
+            "default": 0
+          },
+          "permanent": {
+            "type": "boolean",
+            "title": "Permanent",
+            "default": false
+          },
+          "isShared": {
+            "type": "boolean",
+            "title": "Isshared",
+            "default": false
+          },
+          "userPermission": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharePermission"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isOwner": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isowner"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ListType",
+            "default": "standard"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "MobileHomeListResponse",
+        "description": "Lean list summary rendered by the native Home screen."
+      },
+      "MobileHomeRecentItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "listId": {
+            "type": "string",
+            "title": "Listid"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
+          },
+          "isPriority": {
+            "type": "boolean",
+            "title": "Ispriority",
+            "default": false
+          },
+          "reminder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemReminder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commentCount": {
+            "type": "integer",
+            "title": "Commentcount",
+            "default": 0
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order",
+            "default": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "listId",
+          "content",
+          "type",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "MobileHomeRecentItemResponse",
+        "description": "Lean Quick Takes item rendered on native Home."
+      },
+      "MoveItemRequest": {
+        "properties": {
+          "targetListId": {
+            "type": "string",
+            "title": "Targetlistid",
+            "description": "ID of the destination list"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetListId"
+        ],
+        "title": "MoveItemRequest",
+        "description": "Request model for moving an item to a different list."
+      },
+      "NoteStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "complete"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "NoteStatusUpdate",
+        "description": "Request model for updating note status."
+      },
+      "PinnedListUpdate": {
+        "properties": {
+          "pinned": {
+            "type": "boolean",
+            "title": "Pinned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pinned"
+        ],
+        "title": "PinnedListUpdate",
+        "description": "Set the current user's personal pin state for a list."
+      },
+      "ProjectItemData": {
+        "properties": {
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "durationMinutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durationminutes"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "assignedTo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignedto"
+          },
+          "assignedToContactId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignedtocontactid"
+          }
+        },
+        "type": "object",
+        "title": "ProjectItemData",
+        "description": "Project-only task metadata."
+      },
+      "ReminderRecurrence": {
+        "properties": {
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly",
+              "yearly"
+            ],
+            "title": "Frequency",
+            "description": "How often the reminder repeats"
+          },
+          "interval": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Interval",
+            "description": "Every N units (e.g. every 2 weeks)",
+            "default": 1
+          },
+          "weekdays": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekdays",
+            "description": "For weekly frequency: ISO weekdays 1..7 (Mon..Sun). null = every day of the week"
+          },
+          "endTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endtime",
+            "description": "Stop recurring after this UTC time"
+          },
+          "countRemaining": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Countremaining",
+            "description": "Optional max remaining occurrences (alternative to endTime)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "frequency"
+        ],
+        "title": "ReminderRecurrence",
+        "description": "Recurrence rules for an item reminder. Omit/null for one-shot reminders."
+      },
+      "ReorderItemsRequest": {
+        "properties": {
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order"
+        ],
+        "title": "ReorderItemsRequest",
+        "description": "Request model for reordering items within a list."
+      },
+      "ReorderListsRequest": {
+        "properties": {
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order"
+        ],
+        "title": "ReorderListsRequest",
+        "description": "Request model for reordering lists."
+      },
+      "SharePermission": {
+        "type": "string",
+        "enum": [
+          "read",
+          "edit",
+          "admin"
+        ],
+        "title": "SharePermission",
+        "description": "Permission levels for shared lists."
+      },
+      "UserListCreate": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "title": "Userid"
+          },
+          "permission": {
+            "$ref": "#/components/schemas/SharePermission",
+            "default": "edit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "title": "UserListCreate",
+        "description": "Request model for adding a user to a list."
+      },
+      "UserPermissionUpdate": {
+        "properties": {
+          "permission": {
+            "$ref": "#/components/schemas/SharePermission"
+          }
+        },
+        "type": "object",
+        "required": [
+          "permission"
+        ],
+        "title": "UserPermissionUpdate",
+        "description": "Request model for updating user permission."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "api/auth/login"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Public API",
+      "description": "Public developer API - API key required (except health)"
+    },
+    {
+      "name": "Health",
+      "description": "Health check endpoints (no auth)"
+    }
+  ]
+}
