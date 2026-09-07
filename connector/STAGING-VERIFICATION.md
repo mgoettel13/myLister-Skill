@@ -38,14 +38,108 @@ All eight steps passed. The deleted QA list IDs were
 `6a9dda215665e12bfacc3898`, `6a9dda2f5665e12bfacc3899`, and
 `6a9dda345665e12bfacc389a`. The run did not send email, share content, or upload files.
 
+## Two-account browser regression: 2026-09-07
+
+The installed MCP plugin stayed connected to account A while the Codex internal
+browser signed into the user-designated second staging account B. Tests used only
+new, uniquely named QA projects. No production requests or outbound emails were made.
+An additional offered account was not needed for these checks.
+
+| Check | Observed result |
+| --- | --- |
+| B opens A's unshared project in the browser | List Not Found; no content displayed |
+| A calls `get_list` on B's unshared project | 404 |
+| B grants A View only using the browser | A can read; `create_item` returns 403 Requires edit permission |
+| B changes A to Can Edit | A creates a project task with initial note, dates, duration and B as assignee |
+| Shared item comments | Plugin comment appears in B's browser; B replies and A reads both comments |
+| Shared note comments through MCP | Create and read succeed; B's browser reply is returned by MCP |
+| Shared note comments after browser reload | FAIL: dialog says No comments yet although both comments remain in API responses |
+| Shared author/assignee privacy | FAIL: expanded user objects disclose account settings and phone fields across accounts |
+| Item attachment | Upload of a synthetic 37-byte text file succeeds; browser lists it; MCP download matches the original text |
+| JSON list export | Contains the one QA task, with expected export structure |
+| B removes A's access | User confirmed the browser prompt; A's list/item/file reads and note-comment write all return 404 |
+| Unauthenticated boundary smoke | All eight checks pass again |
+
+The attachment-link click alone did not establish a completed browser download;
+byte-content verification above is through MCP. A successful JSON export does not
+establish HTML export or email delivery.
+
+### Reproduced defects (fixed and retested below)
+
+1. **Excessive collaborator profile disclosure.** Create a shared project, assign
+   a task to the other account, then call `create_item` / `get_item` and the item/note
+   comment endpoints. `createdByUser` and `assignedToUser` contain `settings`,
+   `phone`, `isAdmin`, `isActive`, `isDiscoverable` and `createdAt`, in addition to
+   identity display fields. Settings can include shortcuts and unrelated pinned
+   list IDs. This was verified on the other account, not merely the caller's own
+   profile. `routers/public_handlers/items.py` uses `build_user_response_dict`
+   for these summaries. Replace this with an explicit collaborator-display
+   allowlist and add cross-account regression coverage for every population path.
+   No actual private field values are retained in this report.
+2. **Note-comment UI hydration loses saved comments.** Add a plugin note comment,
+   reply from the browser owner, then reload the item detail page. The note comment
+   count disappears and its dialog says No comments yet. MCP `get_item` still
+   returns two embedded note comments and `get_note_comments` returns both authors.
+   The item detail mapper in `src/app/lists/[id]/items/[itemId]/page.tsx` maps note
+   fields but omits `comments`. Before reload, the original plugin note author was
+   also rendered as Someone. Preserve note comments and author/date data, then
+   retest initial load, reply and reload in both accounts.
+
+### Test record cleanup
+
+- A's project `6a9e48065665e12bfacc38a1` was deleted through MCP; readback returns 404.
+- B's project `6a9e491dfcfdc32173f0f0e7` contains only the synthetic QA task, note,
+  comments and attachment. A's sharing grant has been removed. Owner-side cleanup
+  is awaiting confirmation; do not treat A's permission-denied 404 as deletion proof.
+- B's existing-account onboarding created its normal Quick Takes starter list.
+  It is not QA content and must not be deleted during cleanup.
+
+## Bug fixes and deployed retest: 2026-09-07
+
+Both reproduced defects are fixed on the existing feature branches:
+
+- API `a5db306` on `codex/mylister-plugin-auth`: explicit collaborator-display
+  serialization and database projections for creator, assignee and comment
+  author responses; note-only authors are also populated on list reads.
+- UI `95782d5` on `codex/mylister-plugin-consent`: shared, tested note mapper
+  preserves comments, author identity and parsed dates on detail load/reload.
+- Both branches were pushed and fetched; local/remote divergence is `0 0`.
+- 68 focused API tests passed, including eight new privacy regressions. Three
+  frontend mapper/wiring tests passed; TypeScript checking and the combined
+  deployment-worktree Next.js build passed. The eight live boundary checks passed.
+
+All three submitted Railway staging deployments reached SUCCESS:
+
+| Service | Deployment |
+| --- | --- |
+| Public API | `bf3e9ad5-0531-4adc-b22c-ec04e08652ba` |
+| Private API | `0c8ca057-b750-4ccf-a59e-035d69e591f2` |
+| Web UI | `8addf5a7-1d32-429b-9feb-553d76536009` |
+
+Live retest used a fresh project `6a9e4dbb2ec7b350b4300102`, shared from A to B
+with edit access, and a task assigned to B. MCP create/get/list and comment
+create/read responses contained only `id`, `name`, `email`, `initials`, and
+`profilePictureKey` in user summaries, including B's assignee and comment identity.
+No settings, phone, privileged flags or account timestamps were returned there.
+
+In the internal browser signed into B, the plugin-created note comment displayed
+the correct author. B posted a reply; MCP returned both named authors. After a
+full page reload, the browser still showed `Comments (2)`, both exact texts, and
+both correct author names. This verifies the original reload failure and the
+previous Someone author rendering with an authenticated cross-account flow.
+
+The fresh retest project was deleted through its owning MCP account and a subsequent
+read returned 404. The earlier B-owned QA project remains unshared and awaits its
+separate cleanup approval. No production service or credential was changed.
+
 ## Remaining release gates
 
-- Live shared-item and shared-note comments, sharing permissions and two-account isolation.
-- File uploads/downloads, exports, sending, and the remaining tool families.
+- Extend permission testing to
+  admin operations, comment ownership, and revoked/readonly writes across tool families.
+- Additional file types, note attachments, HTML exports, confirmed sending, and
+  the remaining tool families. Generic item text attachment and JSON export passed.
 - Deployed token refresh/replay, expiry, restart persistence, and disconnect cleanup.
-- Privacy review of expanded project user objects: live item responses include more
-  profile/settings data than basic assignee display needs. Check cross-user exposure
-  before production; this run only inspected its own newly created project item.
+- Finish the earlier QA cleanup and broader privacy review beyond item collaborators.
 - Production secrets, restricted database credentials, policy/support details and
   the final submission checklist described in README.md.
 

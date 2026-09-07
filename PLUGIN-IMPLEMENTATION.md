@@ -34,9 +34,9 @@
 - Plugin manifest and bundled skill validate. The package points only to staging.
 - All four Railway staging services reached `SUCCESS`. Current deployment evidence:
   connector `fcdf53a5-b649-4b93-8c41-92bd8ce708cc`, private API
-  `1c7a511f-cd82-4297-b4df-a76b0136d13b`, public API
-  `91c80b69-dc23-4449-a67f-2b8087db046d`, UI
-  `734a1b16-e034-46e2-92e9-d52fd79c37b6`.
+  `0c8ca057-b750-4ccf-a59e-035d69e591f2`, public API
+  `bf3e9ad5-0531-4adc-b22c-ec04e08652ba`, UI
+  `8addf5a7-1d32-429b-9feb-553d76536009`.
 - Live health, OAuth discovery, unauthenticated MCP rejection, and API version routes
   were verified. The issuer includes its trailing slash; the resource is `/mcp`.
 - The committed read-only `connector/scripts/smoke-staging.mjs` passes all eight
@@ -61,8 +61,16 @@
   integration quota. Personal key listings exclude integration credentials; legacy
   keys still count as personal. Fifty focused auth/key/consent tests pass, and the
   deployed fix allowed authorization without deleting or replacing existing keys.
-- Full authenticated tool-family coverage, two-account permissions, deployed
-  revocation, and restart tests remain in progress. No production readiness is claimed.
+- Two-account browser/MCP testing on 2026-09-07 passed unshared isolation in both
+  directions, read-only write rejection, edit sharing, shared comments, project
+  assignment, text attachment download, JSON export and access removal. It exposed
+  cross-account profile over-disclosure and note comments disappearing from the UI
+  after reload. Both were fixed and live-retested on staging: API `a5db306`, UI
+  `95782d5`; 68 focused API and three frontend regressions pass. Shared profiles
+  now contain display identity only, and both authors/comments survive a browser
+  reload. Full tool-family coverage, deployed OAuth revocation/replay, and
+  restart tests remain in progress. No production readiness is claimed. See
+  `connector/STAGING-VERIFICATION.md` for reproduction steps and cleanup status.
 - Installed-plugin core write regression passed with temporary standard, notebook,
   and project lists: exact journal whitespace, item creation, priority-only update,
   priority query, initial notes, note creation, and note editing. All three test lists
