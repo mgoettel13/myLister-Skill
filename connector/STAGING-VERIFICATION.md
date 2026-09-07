@@ -223,7 +223,28 @@ These results close the deployed access-token expiry, refresh rotation/replay, r
 persistence and owner-disconnect lifecycle checks. They do not establish natural
 30-day connection expiry, upstream outage recovery or overall production readiness.
 
-### Still Required
+### Unattended sharing and export round: 2026-09-07
+
+Repeatable steps and the committed CSV fixture are in
+[tests/STAGING-SHARING-CASES.md](tests/STAGING-SHARING-CASES.md).
+The existing MCP owner and authenticated browser account were used, without new
+OAuth grants, emails, server interruption or production changes.
+
+- Read/edit UI transitions passed. Stale note-comment saves after downgrade and
+  sharing removal did not persist; revoked browser read showed Item Not Found.
+- Note CSV attachment upload (28 bytes), display after reload, removal and empty
+  attachment readback passed. File download integrity remains untested.
+- Light/dark HTML export responses escaped literal markup and included note text.
+  Browser rendering, printing and outbound delivery were not claimed.
+- New risk: an EDIT collaborator successfully changed the owner's note comment,
+  while its author identity still remained the owner's. Resolve intended comment
+  ownership/edit attribution before calling author isolation complete.
+- New UX defect: a rejected stale comment save closes the edit form without a
+  visible error. The store catches the failure and the modal treats it as success.
+- Disposable project `6a9ec99b2ec7b350b4300109` and its attachment were deleted;
+  item `6a9ec9a72ec7b350b430010c` subsequently returned 404. No older QA data was deleted.
+
+### Outstanding Gates
 
 - Extend permission testing to
   admin operations, comment ownership, and revoked/readonly writes across tool families.
