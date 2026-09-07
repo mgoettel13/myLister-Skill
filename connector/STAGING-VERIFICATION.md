@@ -149,6 +149,8 @@ separate cleanup approval. No production service or credential was changed.
   exact command on stdin. The `disconnect` mode instead waits for the owner to
   disconnect the named QA app in Settings, then accepts `disconnect-complete`.
   Do not disconnect the user's pre-existing plugin connection.
+  Run either mode in a persistent interactive terminal (`tty=true` with Codex
+  exec_command); closed stdin aborts the operator step and revokes issued tokens.
 - `scripts/inspect-oauth-qa.mjs` reads the exact QA client/owner's connector and
   integration-key records to verify revocation and encrypted-key removal. Supply
   `connectorMongoUrl`, `connectorDatabase`, `apiMongoUrl`, `apiDatabase`, `clientId`,
@@ -161,11 +163,36 @@ separate cleanup approval. No production service or credential was changed.
 
 ## Remaining release gates
 
+### Lifecycle retry evidence: 2026-09-07
+
+- A user-approved temporary QA connection passed wrong-PKCE rejection, wrong-resource
+  rejection, valid code exchange, authorization-code replay rejection, authenticated
+  discovery of 58 tools, a real public-data read and initial refresh-token rotation.
+- The staging connector was restarted and returned to SUCCESS with a new startup
+  log at `2026-09-07T13:54:27Z`. The runner's noninteractive stdin was closed, so
+  post-restart access/refresh assertions did not run. Restart persistence is **not**
+  verified by the service restart alone.
+- The owner-side Settings disconnect removed that QA connection. Read-only inspection
+  of its exact staging records confirmed revoked connection state, acknowledged
+  cleanup, removal of the encrypted key, and revocation of the dedicated upstream
+  integration key. The stalled local runner was stopped.
+- The runner now detects closed operator input and cleans up instead of waiting for
+  its operator timeout. A fresh run with `tty=true` accepted terminal input, but no
+  consent callback arrived during its nine-minute window. It exited with
+  `Consent timed out`; no tokens were obtained in that run.
+- Verification rerun: 21 connector tests passed, one optional Mongo test skipped;
+  all eight live boundary checks and an existing installed-plugin data read passed.
+  Node syntax checking and `git diff --check` passed. No production changes were made.
+
+### Still Required
+
 - Extend permission testing to
   admin operations, comment ownership, and revoked/readonly writes across tool families.
 - Additional file types, note attachments, HTML exports, confirmed sending, and
   the remaining tool families. Generic item text attachment and JSON export passed.
-- Deployed token refresh/replay, expiry, restart persistence, and disconnect cleanup.
+- Complete deployed refresh replay, natural access expiry, post-restart token use,
+  and immediate access/refresh rejection after UI disconnect. Initial refresh rotation
+  and owner disconnect's durable upstream cleanup passed as recorded above.
 - Finish the earlier QA cleanup and broader privacy review beyond item collaborators.
 - Production secrets, restricted database credentials, policy/support details and
   the final submission checklist described in README.md.

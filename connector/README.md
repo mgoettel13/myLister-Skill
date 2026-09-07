@@ -72,6 +72,18 @@ staging deployment: health, OAuth/PKCE and resource metadata, MCP authentication
 Origin rejection, protected internal routes, and the API-key-only public boundary.
 This script creates no accounts or grants and does not replace authenticated tests.
 
+For consent-based staging lifecycle tests, use a persistent interactive terminal
+(`tty=true` when using Codex exec_command):
+
+```sh
+node scripts/test-oauth-staging.mjs replay
+node scripts/test-oauth-staging.mjs disconnect
+```
+
+Follow the operator checkpoints
+in [STAGING-VERIFICATION.md](STAGING-VERIFICATION.md). Closed stdin aborts an operator
+checkpoint and triggers token cleanup; do not run these as noninteractive jobs.
+
 ## Public API Contract
 
 `contracts/public-openapi.json` is a pinned snapshot of the public `/v1` contract.

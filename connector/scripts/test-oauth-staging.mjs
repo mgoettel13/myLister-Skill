@@ -15,11 +15,14 @@ const state = random();
 const callbackPath = `/callback/${random().slice(0, 16)}`;
 const input = createInterface({ input: process.stdin });
 const commands = [];
+let inputClosed = false;
+input.on('close', () => { inputClosed = true; });
 input.on('line', line => commands.push(line.trim()));
 async function command(expected) {
   console.log(`WAIT ${expected}`);
   const deadline = Date.now() + 20 * 60_000;
   while (!commands.includes(expected)) {
+    if (inputClosed) throw new Error('Operator input closed; run this test with a persistent terminal (tty=true)');
     if (Date.now() > deadline) throw new Error('Operator step timed out');
     await delay(250);
   }
