@@ -132,6 +132,33 @@ The fresh retest project was deleted through its owning MCP account and a subseq
 read returned 404. The earlier B-owned QA project remains unshared and awaits its
 separate cleanup approval. No production service or credential was changed.
 
+## OAuth lifecycle preparation: 2026-09-07
+
+- Connector unit/HTTP tests: 21 passed. The optional Mongo test was then run
+  separately against an isolated temporary database and passed; its database was
+  deleted in the test's finally block.
+- Live staging issuer discovery, temporary public-client registration, and normal
+  browser consent routing passed. The new grant was not approved. Cancellation
+  returned an issuer/state-bound access-denied callback; no tokens were issued.
+  The local callback listener was stopped. This is not an authenticated lifecycle pass.
+- `scripts/test-oauth-staging.mjs` is a staging-only, token-in-memory runner:
+  `node connector/scripts/test-oauth-staging.mjs replay` exercises PKCE, code reuse,
+  refresh rotation, restart persistence, natural ten-minute access expiry and
+  refresh replay revocation after explicit consent. At `WAIT restart-complete`,
+  restart only the staging connector, verify Railway success, then supply that
+  exact command on stdin. The `disconnect` mode instead waits for the owner to
+  disconnect the named QA app in Settings, then accepts `disconnect-complete`.
+  Do not disconnect the user's pre-existing plugin connection.
+- `scripts/inspect-oauth-qa.mjs` reads the exact QA client/owner's connector and
+  integration-key records to verify revocation and encrypted-key removal. Supply
+  `connectorMongoUrl`, `connectorDatabase`, `apiMongoUrl`, `apiDatabase`, `clientId`,
+  and `userId` as one JSON line on stdin, using securely loaded staging config.
+  It permits only the named staging databases and lifecycle-QA client names,
+  does not fetch plaintext/encrypted credentials, and performs no writes.
+- Both scripts pass Node syntax checks. Their authenticated lifecycle and cleanup
+  verification paths still require a user-approved temporary staging connection.
+  Natural 30-day connection expiry is not covered by a ten-minute access-token test.
+
 ## Remaining release gates
 
 - Extend permission testing to
