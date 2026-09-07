@@ -157,8 +157,8 @@ separate cleanup approval. No production service or credential was changed.
   and `userId` as one JSON line on stdin, using securely loaded staging config.
   It permits only the named staging databases and lifecycle-QA client names,
   does not fetch plaintext/encrypted credentials, and performs no writes.
-- Both scripts pass Node syntax checks. Their authenticated lifecycle and cleanup
-  verification paths still require a user-approved temporary staging connection.
+- Both scripts pass Node syntax checks. At this preparation stage, their authenticated
+  lifecycle and cleanup paths still required approval; the completed run is recorded below.
   Natural 30-day connection expiry is not covered by a ten-minute access-token test.
 
 ## Remaining release gates
@@ -184,15 +184,54 @@ separate cleanup approval. No production service or credential was changed.
   all eight live boundary checks and an existing installed-plugin data read passed.
   Node syntax checking and `git diff --check` passed. No production changes were made.
 
+### Approved live lifecycle run: 2026-09-07
+
+Two separate temporary grants were approved by the owner in the internal browser,
+using `test-oauth-staging.mjs` with a persistent terminal. Tokens remained in process
+memory; no API keys, authorization codes or tokens are included in this report.
+
+- Both runs passed issuer discovery, public-client registration, normal consent,
+  wrong-PKCE and wrong-resource rejection, valid code exchange, code-reuse rejection,
+  discovery of all 58 tools and a real public-data read through the integration key.
+- Replay run: initial refresh rotated the token. Only the staging connector was
+  restarted, on deployment `fcdf53a5-b649-4b93-8c41-92bd8ce708cc`. Railway reported
+  SUCCESS, with a new listening log at `2026-09-07T14:11:19.993Z`. The previously
+  issued access token worked after restart and the refresh token successfully
+  rotated again, establishing deployed persistence across process restart.
+- Disconnect run: owner-side Settings removed only `MyLister lifecycle QA disconnect`.
+  The runner immediately observed access rejection (401) and refresh rejection (400),
+  completed all disconnect assertions and exited successfully.
+- Read-only inspection of the exact disconnect grant confirmed revoked connection
+  state, acknowledged cleanup, no stored encrypted key and a revoked dedicated
+  upstream integration key. The separate replay grant remained visible in Settings.
+- The pre-existing installed-plugin connection still returned a successful data read
+  after the restart and QA disconnection; it was not disconnected or replaced.
+- The replay runner waited for the actual 600-second access lifetime, without changing
+  server configuration or database timestamps. The expired access token returned 401;
+  refresh issued new tokens and the new access token worked.
+- Reusing the original consumed refresh token returned 400 `invalid_grant` and revoked
+  the whole test connection: the current access token returned 401 and the current
+  refresh token returned 400. All replay-run assertions passed and the runner exited 0.
+- Read-only inspection of the exact replay grant then confirmed revoked state,
+  acknowledged upstream-key revocation and removal of its encrypted key. After a full
+  browser reload, the test account showed No connected apps. The pre-existing installed
+  plugin on the other account still completed a data read after replay revocation.
+- All eight live boundary smoke checks passed after restart. Both temporary runners
+  and their local callback listeners stopped; no production service or secret changed.
+
+These results close the deployed access-token expiry, refresh rotation/replay, restart
+persistence and owner-disconnect lifecycle checks. They do not establish natural
+30-day connection expiry, upstream outage recovery or overall production readiness.
+
 ### Still Required
 
 - Extend permission testing to
   admin operations, comment ownership, and revoked/readonly writes across tool families.
 - Additional file types, note attachments, HTML exports, confirmed sending, and
   the remaining tool families. Generic item text attachment and JSON export passed.
-- Complete deployed refresh replay, natural access expiry, post-restart token use,
-  and immediate access/refresh rejection after UI disconnect. Initial refresh rotation
-  and owner disconnect's durable upstream cleanup passed as recorded above.
+- Deployed upstream outage/revocation-retry scenarios and connection/key expiry
+  beyond the tested ten-minute access-token lifetime. Natural 30-day expiry has not
+  been observed; local clock-controlled tests do not substitute for that live evidence.
 - Finish the earlier QA cleanup and broader privacy review beyond item collaborators.
 - Production secrets, restricted database credentials, policy/support details and
   the final submission checklist described in README.md.
