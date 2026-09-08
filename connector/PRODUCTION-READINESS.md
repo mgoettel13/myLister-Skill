@@ -1,7 +1,7 @@
 # Production Plugin Preparation
 
-Status: infrastructure reservation only. The installed plugin and its manifest still
-target staging. An empty production service is reserved; no connector is deployed yet.
+Status: connector deployed; HTTPS ownership verification pending. The installed
+plugin and its manifest still target staging. Production consent is not enabled yet.
 
 ## Reserved Infrastructure (2026-09-08)
 
@@ -10,9 +10,18 @@ target staging. An empty production service is reserved; no connector is deploye
 - Service: mylister-connector-prod, f137cdb7-c42b-4739-bf47-7dd048030d55.
 - Owner-approved hostname: mcp.mylister.dev, target container port 8080.
 - Required DNS: CNAME mcp.mylister.dev -> pea5lhnk.up.railway.app.
-- Railway domain verification is pending DNS; certificate is validating ownership.
-- Atlas integration returned reauthentication required. No database credential was
-  created; never substitute the staging or unrestricted application credential.
+- Railway confirms the CNAME has propagated and domain routing is ACTIVE.
+- Ownership remains unverified; certificate is VALIDATING_OWNERSHIP. Add the TXT
+  record returned by `railway domain status mcp.mylister.dev` at `_railway-verify.mcp`.
+- Atlas reconnection succeeded. The new user `mylister_connector_prod` has only
+  readWrite on `mylister_connector_prod`, scoped to the Lister cluster; roles read back.
+- Independent production shared/encryption secrets and the restricted database URI
+  are stored in the connector's Railway variables, not this repository.
+- Connector deployment `2f350ebd-0888-4d51-a829-77f4e8d1299f` reached SUCCESS.
+- 21 local connector tests passed; the optional Mongo test was skipped.
+- Public HTTPS smoke checks have NOT passed: local lookup failed, and direct routing
+  with normal TLS validation reported a certificate mismatch. No TLS checks bypassed.
+- Production private API variables remain unchanged until connector HTTPS is valid.
 
 ## Verified Baseline
 
@@ -24,11 +33,9 @@ target staging. An empty production service is reserved; no connector is deploye
 ## Configuration Decisions
 
 - Public REST origin remains https://api.mylister.dev, using X-API-Key only.
-- Approved connector origin: https://mcp.mylister.dev, pending DNS and deployment.
-- Resolve production private API service and normal app consent URL from live service
-  configuration; do not copy staging origins or assume the internal hostname.
-- Provision a separate connector database and a credential restricted to that database.
-- Generate independent production shared/encryption secrets through secret management.
+- Approved connector origin: https://mcp.mylister.dev, pending certificate verification.
+- Verified private origin: http://lister-api-private-prod.railway.internal:80.
+- Verified production UI domain: app.mylister.dev; consent uses /integrations/authorize.
 - Configure the private API's connector URL/shared secret together with the connector.
 - Configure exact approved callbacks and origins, with explicit native-loopback policy.
 - Preserve staging service, database, credentials and existing installed connection.
@@ -48,3 +55,6 @@ target staging. An empty production service is reserved; no connector is deploye
    five positive and three negative reviewer cases, and reviewer account access.
 
 Production deployment, authenticated verification and submission are separate milestones.
+
+Run `node connector/scripts/smoke-staging.mjs --production` from the repository root
+after HTTPS is ready. Without the explicit flag the script still checks staging.

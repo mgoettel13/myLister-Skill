@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 
-// Read-only checks against staging only. No accounts, grants, or API keys are created.
-const connector = 'https://mylister-connector-staging.up.railway.app';
-const publicApi = 'https://lister-api-public-staging.up.railway.app';
+// No accounts, grants, or API keys are created. Production requires an explicit flag.
+assert.ok(process.argv.slice(2).every(arg => arg === '--production'), 'Unknown argument');
+const production = process.argv.includes('--production');
+const connector = production ? 'https://mcp.mylister.dev' : 'https://mylister-connector-staging.up.railway.app';
+const publicApi = production ? 'https://api.mylister.dev' : 'https://lister-api-public-staging.up.railway.app';
 const resource = `${connector}/mcp`;
 let checks = 0;
 async function check(name, url, status, init = {}, validate) {
@@ -53,4 +55,4 @@ await check('public data requires API key', `${publicApi}/v1/lists`, 401);
 await check('public data rejects OAuth bearer', `${publicApi}/v1/lists`, 401, {
   headers: { Authorization: 'Bearer smoke-test-invalid-token' },
 });
-console.log(`${checks} staging boundary checks passed. Authenticated behavior is not covered.`);
+console.log(`${checks} ${production ? 'production' : 'staging'} boundary checks passed. Authenticated behavior is not covered.`);

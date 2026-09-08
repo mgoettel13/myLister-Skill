@@ -71,6 +71,8 @@ Run `node scripts/smoke-staging.mjs` for eight read-only checks against the fixe
 staging deployment: health, OAuth/PKCE and resource metadata, MCP authentication,
 Origin rejection, protected internal routes, and the API-key-only public boundary.
 This script creates no accounts or grants and does not replace authenticated tests.
+Use `node scripts/smoke-staging.mjs --production` to run the same checks against
+the fixed production connector/API origins. Staging remains the default.
 
 For consent-based staging lifecycle tests, use a persistent interactive terminal
 (`tty=true` when using Codex exec_command):
