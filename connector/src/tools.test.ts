@@ -111,3 +111,32 @@ test('upstream revoked keys request reauthorization without exposing the key', a
   assert.ok(result._meta?.['mcp/www_authenticate']);
   assert.ok(!JSON.stringify(result).includes(key));
 });
+
+test('upstream errors expose status guidance, not debug bodies or submitted content', async () => {
+  for (const status of [400, 401, 402, 403, 404, 409, 413, 415, 422, 429, 500, 502, 503]) {
+    let calls = 0;
+    const fetcher: typeof fetch = async () => {
+      calls++;
+      return new Response(JSON.stringify({ detail: 'private-debug-marker', input: 'private-journal-marker', otherCredential: 'unrelated-secret-marker' }), { status });
+    };
+    const result = await callPublicTool('create_list', { body: { name: 'synthetic QA' } }, key, base, fetcher);
+    assert.equal(result.isError, true);
+    assert.equal(calls, 1);
+    const text = JSON.stringify(result);
+    assert.ok(text.includes(String(status)));
+    assert.ok(!text.includes('private-debug-marker'));
+    assert.ok(!text.includes('private-journal-marker'));
+    assert.ok(!text.includes('unrelated-secret-marker'));
+    assert.equal(Boolean(result._meta?.['mcp/www_authenticate']), status === 401);
+    if (status >= 500 || status === 429) assert.match(text, /check whether it succeeded/i);
+  }
+});
+
+test('error response streams are cancelled without reading potentially sensitive bodies', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({ cancel() { cancelled = true; } });
+  const fetcher: typeof fetch = async () => new Response(body, { status: 503 });
+  const result = await callPublicTool('get_priority_items', {}, key, base, fetcher);
+  assert.equal(result.isError, true);
+  assert.equal(cancelled, true);
+});

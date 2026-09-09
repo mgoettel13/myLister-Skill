@@ -81,6 +81,10 @@ OAuth, without reading credential files or account content. It verifies every
 tool schema and annotation against the local build. Run `npm run build` first.
 Unknown tools require an explicit [annotation review](TOOL-ANNOTATIONS.md).
 
+API error responses expose status-specific guidance, not raw upstream bodies.
+The [failure-path tests](FAILURE-PATH-VERIFICATION.md) cover sensitive-error
+redaction, real local HTTP recovery, ambiguous writes and connection-expiry limits.
+
 For consent-based staging lifecycle tests, use a persistent interactive terminal
 (`tty=true` when using Codex exec_command):
 

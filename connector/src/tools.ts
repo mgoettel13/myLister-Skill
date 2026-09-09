@@ -117,6 +117,19 @@ function multipartBody(body: Schema): FormData {
   return form;
 }
 
+const errorGuidance: Record<number, string> = {
+  400: 'Check the supplied arguments and the current item or list state.',
+  401: 'Reconnect MyLister to continue.',
+  402: 'This operation requires an eligible MyLister plan.',
+  403: 'Your account lacks permission or an entitlement required for this operation.',
+  404: 'The requested resource was not found or is not accessible to this account.',
+  409: 'The request conflicts with the current resource state. Read the target before changing it.',
+  413: 'The upload exceeds the MyLister file-size limit.',
+  415: 'This file or request content type is not supported.',
+  422: 'The request failed validation. Check the tool schema and supplied values.',
+  429: 'MyLister is rate-limiting requests. Wait before retrying a read; for a write, check whether it succeeded before retrying.',
+};
+
 export async function callPublicTool(
   name: string, args: unknown, apiKey: string, baseUrl: URL, fetcher: typeof fetch = fetch,
 ): Promise<CallToolResult> {
@@ -151,15 +164,19 @@ export async function callPublicTool(
     if (operation.method !== 'GET' || !target || target.protocol !== 'https:' || target.username || target.password) throw new Error('Unexpected API redirect');
     return { content: [{ type: 'resource_link', name: 'MyLister file', uri: target.href }] };
   }
-  const bytes = await boundedResponse(response);
-  const mime = (response.headers.get('content-type') ?? 'application/octet-stream').split(';')[0];
   if (!response.ok) {
-    // Error bodies can contain submitted content; never include request headers or credentials.
+    // Upstream errors can echo account content, credentials or internal exceptions.
+    // Discard the body entirely; exact-key redaction is not a privacy boundary.
+    await response.body?.cancel();
+    const guidance = errorGuidance[response.status] ??
+      'MyLister could not complete the request. For a write, check whether it succeeded before retrying.';
     return { isError: true,
       ...(response.status === 401 ? { _meta: { 'mcp/www_authenticate': ['Bearer error="invalid_token"'] } } : {}),
-      content: [{ type: 'text', text: `MyLister API returned ${response.status}: ${bytes.toString('utf8').slice(0, 3000).replaceAll(apiKey, '[redacted]')}` }],
+      content: [{ type: 'text', text: `MyLister API returned ${response.status}. ${guidance}` }],
     };
   }
+  const bytes = await boundedResponse(response);
+  const mime = (response.headers.get('content-type') ?? 'application/octet-stream').split(';')[0];
   if (mime === 'application/json' || mime.endsWith('+json') || mime.startsWith('text/')) {
     return { content: [{ type: 'text', text: bytes.toString('utf8') || 'Done.' }] };
   }

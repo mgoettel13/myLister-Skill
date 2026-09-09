@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes, createHash } from 'node:crypto';
-import { request as httpRequest } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import { test } from 'node:test';
 import express from 'express';
 import type { Response } from 'express';
@@ -253,4 +253,125 @@ test('Railway internal consent requires both the configured Host and service cre
   assert.equal(await get('connector.railway.internal:8080'), 401);
   assert.equal(await get('connector.railway.internal:8080', config.sharedSecret, 'https://app.example'), 401);
   assert.equal(await get('untrusted.example', config.sharedSecret), 421);
+});
+
+test('real HTTP MCP handles upstream outages, ambiguous writes and binary responses safely', async t => {
+  let mode = 'ok';
+  let hits = 0;
+  let savedWrites = 0;
+  const keys: string[] = [];
+  const file = Buffer.from(Array.from({ length: 256 }, (_, index) => index));
+  const upstream = createServer((req, res) => {
+    hits++;
+    keys.push(String(req.headers['x-api-key']));
+    assert.equal(req.headers.authorization, undefined);
+    req.resume();
+    req.on('end', () => {
+      if (mode === 'drop-write') {
+        savedWrites++;
+        req.socket.destroy();
+      } else if (mode === 'file') {
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream' }).end(file);
+      } else if (mode !== 'ok') {
+        res.writeHead(Number(mode), { 'Content-Type': 'application/json' })
+          .end(JSON.stringify({ detail: 'private-upstream-debug', input: 'private-submitted-content' }));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"success":true,"data":[]}');
+      }
+    });
+  });
+  upstream.listen(0, '127.0.0.1');
+  await new Promise<void>(resolve => upstream.once('listening', resolve));
+  t.after(() => new Promise<void>(resolve => { upstream.closeAllConnections(); upstream.close(() => resolve()); }));
+  const upstreamAddress = upstream.address();
+  assert.ok(upstreamAddress && typeof upstreamAddress !== 'string');
+  const f = await fixture();
+  const config = loadConfig({
+    CONNECTOR_PUBLIC_URL: 'https://connector.example', MYLISTER_PUBLIC_API_URL: 'https://api.example',
+    MYLISTER_PRIVATE_API_URL: 'http://api.railway.internal:80',
+    MYLISTER_CONSENT_URL: 'https://app.example/integrations/authorize',
+    OAUTH_ALLOWED_REDIRECT_URIS: JSON.stringify([redirectUri]),
+    MYLISTER_CONNECTOR_SECRET: 'test-service-secret-with-at-least-32-bytes',
+    CREDENTIAL_ENCRYPTION_KEY: randomBytes(32).toString('base64'), MONGODB_URL: 'mongodb://localhost',
+    MONGODB_DATABASE: 'test', PORT: '8080',
+  });
+  // Test-only loopback upstream. Production loadConfig continues to require HTTPS.
+  config.apiBase = new URL(`http://127.0.0.1:${upstreamAddress.port}`);
+  const server = createApp(f.provider, config).listen(0, '127.0.0.1');
+  await new Promise<void>(resolve => server.once('listening', resolve));
+  t.after(() => new Promise<void>(resolve => { server.closeAllConnections(); server.close(() => resolve()); }));
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  config.allowedHosts.push(`127.0.0.1:${address.port}`);
+  const approval = await f.approve();
+  const one = await f.provider.exchangeAuthorizationCode(f.client, approval.code, undefined, redirectUri, resource);
+  const other = await f.approve('user-two');
+  const two = await f.provider.exchangeAuthorizationCode(f.client, other.code, undefined, redirectUri, resource);
+  const invoke = async (name: string, args: unknown = {}, token = one.access_token) => {
+    const response = await fetch(`http://127.0.0.1:${address.port}/mcp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    return { status: response.status, body: await response.json() as { result?: { isError?: boolean; content: Array<Record<string, unknown>>; _meta?: Record<string, unknown> } } };
+  };
+
+  const first = await invoke('get_priority_items');
+  assert.equal(first.status, 200);
+  assert.ok(!first.body.result?.isError);
+  assert.equal(keys.at(-1), 'lister_test-user-one');
+  for (const status of [503, 429, 403, 401]) {
+    mode = String(status);
+    const before = hits;
+    const failed = await invoke('get_priority_items');
+    assert.equal(failed.body.result?.isError, true);
+    assert.equal(hits, before + 1, 'No automatic retry');
+    assert.ok(!JSON.stringify(failed).includes('private-upstream'));
+    assert.ok(!JSON.stringify(failed).includes('private-submitted'));
+    assert.equal(Boolean(failed.body.result?._meta?.['mcp/www_authenticate']), status === 401);
+  }
+  mode = 'ok';
+  assert.ok(!(await invoke('get_priority_items')).body.result?.isError, 'Read recovers after upstream outage');
+
+  mode = 'drop-write';
+  const beforeWrite = hits;
+  const ambiguous = await invoke('create_list', { body: { name: 'synthetic local fixture' } });
+  assert.equal(ambiguous.body.result?.isError, true);
+  assert.match(JSON.stringify(ambiguous), /Do not retry a write without checking/);
+  assert.equal(hits, beforeWrite + 1);
+  assert.equal(savedWrites, 1, 'Accepted write is not duplicated after connection loss');
+
+  mode = 'file';
+  const downloaded = await invoke('get_file', { path: { file_key: 'synthetic.bin' } });
+  const content = downloaded.body.result?.content[0];
+  assert.equal(content?.type, 'resource');
+  const downloadedResource = content?.resource as { mimeType: string; blob: string };
+  assert.equal(downloadedResource.mimeType, 'application/octet-stream');
+  assert.deepEqual(Buffer.from(downloadedResource.blob, 'base64'), file);
+
+  const beforeRejected = hits;
+  assert.equal((await invoke('create_api_key')).body.result?.isError, true);
+  assert.equal((await invoke('create_list', { body: { name: 'invalid', type: 'admin' } })).body.result?.isError, true);
+  assert.equal(hits, beforeRejected, 'Unknown or invalid operations never reach the upstream');
+  await f.provider.disconnect(approval.connectionId, 'user-one');
+  assert.equal((await invoke('get_priority_items')).status, 401);
+  assert.equal(hits, beforeRejected, 'Disconnected account cannot send an upstream request');
+  mode = 'ok';
+  assert.ok(!(await invoke('get_priority_items', {}, two.access_token)).body.result?.isError);
+  assert.equal(keys.at(-1), 'lister_test-user-two');
+});
+
+test('connection expiry caps newly issued tokens and rejects access before cleanup runs', async () => {
+  const f = await fixture();
+  const approved = await f.approve();
+  const tokens = await f.provider.exchangeAuthorizationCode(f.client, approved.code, undefined, redirectUri, resource);
+  f.advance(30 * 86400 - 1);
+  const last = await f.provider.exchangeRefreshToken(f.client, tokens.refresh_token!, undefined, resource);
+  assert.equal(last.expires_in, 1);
+  await f.provider.verifyAccessToken(last.access_token);
+  f.advance(1);
+  await assert.rejects(f.provider.verifyAccessToken(last.access_token));
+  await assert.rejects(f.provider.exchangeRefreshToken(f.client, last.refresh_token!, undefined, resource));
+  assert.deepEqual(await f.provider.listConnections('user-one'), []);
+  assert.equal((await f.store.get(approved.connectionId, 'connection'))?.state, 'active', 'Denial does not depend on worker or TTL cleanup');
 });
