@@ -55,7 +55,7 @@ passed. It is not yet submitted, approved, or publicly published.
 - Exact approved HTTPS callback and browser origins remain restricted.
 - Preserve staging service, database, credentials and existing installed connection.
 
-## Remaining Submission Gates
+## Release Gates
 
 1. Exercise controlled production write fixtures only after approval. Confirm outbound
    recipients before sending tests. Do not restart shared production services for QA.
@@ -64,7 +64,11 @@ passed. It is not yet submitted, approved, or publicly published.
 3. Per-tool annotation review is complete in [TOOL-ANNOTATIONS.md](TOOL-ANNOTATIONS.md).
    Staging deployment `e631756a-2703-4dd5-ab34-81458473183a` reached SUCCESS;
    all 58 live tool schemas/annotations match the reviewed build through Codex.
-   Promote the correction to production and scan final metadata in the submission portal.
+   Production deployment `67f41b66-8ba4-4ded-8120-22a51d8b27cd` also reached SUCCESS
+   from `9de37da`. All 58 deployed schemas/annotations and eight boundary checks pass.
+   The verifier detected old production metadata before the rollout and passed afterward.
+   Post-rollout authenticated list-summary and priority reads passed with no tool errors.
+   Scan final metadata in the submission portal when publisher access is available.
 4. Confirm verified publisher identity, Apps Management write access, public policy,
    terms/support URLs, country availability, and backup/encryption-key recovery procedure.
 5. Prepare reviewer access without MFA, SMS or email OTP. Run the committed
@@ -87,6 +91,9 @@ passed. It is not yet submitted, approved, or publicly published.
 - The rendered production marketing homepage has no privacy, terms or support links.
   Public approved URLs must be provided or published; absence of homepage links alone
   does not prove those documents do not exist elsewhere.
+- Submission copy and byte-verified bundle hashes are in
+  [SUBMISSION-PACKET.md](SUBMISSION-PACKET.md). Packaging is complete; reviewer
+  test execution and publisher/legal attestations are not implied by those artifacts.
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not
