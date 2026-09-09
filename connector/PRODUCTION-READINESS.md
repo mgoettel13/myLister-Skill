@@ -61,9 +61,10 @@ passed. It is not yet submitted, approved, or publicly published.
    recipients before sending tests. Do not restart shared production services for QA.
 2. Complete isolated outage/retry and expiry tests plus feature/permission gaps from
    STAGING-VERIFICATION.md. Recheck both comment fixes after the other agent delivers them.
-3. Review each tool's annotations semantically. Current method-derived hints are
-   conservative, not a completed review; POST download exports are read-only, for example.
-   Deploy any corrections and scan the final metadata in the submission portal.
+3. Per-tool annotation review is complete in [TOOL-ANNOTATIONS.md](TOOL-ANNOTATIONS.md).
+   Staging deployment `e631756a-2703-4dd5-ab34-81458473183a` reached SUCCESS;
+   all 58 live tool schemas/annotations match the reviewed build through Codex.
+   Promote the correction to production and scan final metadata in the submission portal.
 4. Confirm verified publisher identity, Apps Management write access, public policy,
    terms/support URLs, country availability, and backup/encryption-key recovery procedure.
 5. Prepare reviewer access without MFA, SMS or email OTP. Run the committed
@@ -73,6 +74,19 @@ passed. It is not yet submitted, approved, or publicly published.
    not replace OpenAI ownership verification; use only the exact issued challenge token.
 7. Upload the production skill with the MCP endpoint after owner sign-off. Submission
    and publication after review approval are separate actions, neither performed here.
+
+## Submission Audit (2026-09-09)
+
+- Updated connector suite: 27 passed, zero failed, one optional Mongo test skipped.
+- Live production OpenAPI paths and component schemas match the pinned snapshot.
+- Refreshed remote staging refs: API `9168d68`, UI `e79374d`. The newer comment
+  author/edit and swallowed-save-error findings remain present in those sources.
+  Their fixes cannot be marked deployed or verified yet.
+- OpenAI submission portal redirects to login; publisher identity, role and domain
+  challenge are not yet inspectable. Owner sign-in is needed, not credentials in chat.
+- The rendered production marketing homepage has no privacy, terms or support links.
+  Public approved URLs must be provided or published; absence of homepage links alone
+  does not prove those documents do not exist elsewhere.
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not

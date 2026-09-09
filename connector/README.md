@@ -74,6 +74,13 @@ This script creates no accounts or grants and does not replace authenticated tes
 Use `node scripts/smoke-staging.mjs --production` to run the same checks against
 the fixed production connector/API origins. Staging remains the default.
 
+With Codex installed and the relevant plugin already connected, run
+`node scripts/verify-installed-metadata.mjs` (or add `--production`). This uses
+Codex's app-server protocol to inspect the deployed tool inventory with existing
+OAuth, without reading credential files or account content. It verifies every
+tool schema and annotation against the local build. Run `npm run build` first.
+Unknown tools require an explicit [annotation review](TOOL-ANNOTATIONS.md).
+
 For consent-based staging lifecycle tests, use a persistent interactive terminal
 (`tty=true` when using Codex exec_command):
 
