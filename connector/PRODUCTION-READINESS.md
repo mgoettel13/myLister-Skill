@@ -63,6 +63,8 @@ passed. It is not yet submitted, approved, or publicly published.
    STAGING-VERIFICATION.md. Recheck both comment fixes after the other agent delivers them.
    The nullable-description HTML export regression also requires merge, deployment,
    and live recheck: [API PR #12](https://github.com/mgoettel13/lister-api/pull/12).
+   Explicit priority at item creation also requires deployment and recheck:
+   [API PR #13](https://github.com/mgoettel13/lister-api/pull/13).
 3. Per-tool annotation review is complete in [TOOL-ANNOTATIONS.md](TOOL-ANNOTATIONS.md).
    Staging deployment `e631756a-2703-4dd5-ab34-81458473183a` reached SUCCESS;
    all 58 live tool schemas/annotations match the reviewed build through Codex.
@@ -118,6 +120,11 @@ passed. It is not yet submitted, approved, or publicly published.
   saw the exact comment text and actual author after a full browser reload. READ
   note-comment controls were absent. Test sharing was removed, the fixture deleted,
   and item readback returned 404. This does not close the separate two comment bugs.
+- Additional [item lifecycle checks](tests/ITEM-LIFECYCLE-STAGING-20260909.md)
+  passed 12 readback assertions for notes, own comments, ordering, moves, priority
+  updates, and item/list archiving. Explicit priority during creation failed.
+  API fix `66b6fac` is in PR #13 with 37 focused tests passing, not deployed.
+  Both temporary lists and tasks were deleted; final task readbacks returned 404.
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not
