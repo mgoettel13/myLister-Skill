@@ -1,0 +1,25 @@
+{
+  "name": "mylister-production",
+  "version": "0.1.0-rc.1",
+  "description": "Manage MyLister.dev lists, projects, notes, collaboration, and files through your connected account.",
+  "author": {
+    "name": "MyLister.dev",
+    "url": "https://mylister.dev"
+  },
+  "homepage": "https://mylister.dev/codex",
+  "repository": "https://github.com/mgoettel13/MyLister-Skill",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MyLister.dev",
+    "shortDescription": "Lists, projects, and shared notes in MyLister.dev.",
+    "longDescription": "Connect your MyLister.dev account to manage tasks, projects, journal entries, notes, priorities, comments, sharing, sending, reminders, and attachments. Authorization uses your account's existing permissions.",
+    "developerName": "MyLister.dev",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://mylister.dev",
+    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/logo.png",
+    "defaultPrompt": ["What are my priority items?", "Add Call Mama to my Today list.", "Create a project for my next launch."]
+  },
+  "mcpServers": "./.mcp.json"
+}

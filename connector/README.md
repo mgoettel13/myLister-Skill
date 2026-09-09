@@ -120,8 +120,10 @@ npm test
   connections remain unless deliberately revoking them first.
 - Review retained metadata, policy/support URLs, provider identity, screenshots, and
   reviewer test accounts. Complete the OpenAI submission checklist before publication.
-- Publish a production plugin version only after these gates pass. This prerelease
-  manifest is explicitly staging-only and is not yet a submitted/public production plugin.
+- Publish only after these gates pass. `plugins/mylister` remains staging-only;
+  `plugins/mylister-production` is the separately installed production release candidate.
+  See [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) for current evidence and
+  [reviewer cases](tests/PRODUCTION-REVIEWER-CASES.md) for the submission test plan.
 
 References: [OpenAI plugin authentication](https://developers.openai.com/plugins/build/auth),
 [plugin packaging](https://developers.openai.com/plugins/build/plugins), and

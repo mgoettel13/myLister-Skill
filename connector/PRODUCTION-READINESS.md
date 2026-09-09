@@ -1,9 +1,10 @@
-# Production Plugin Preparation
+# Production Plugin Readiness
 
-Status: connector deployed; HTTPS ownership verification pending. The installed
-plugin and its manifest still target staging. Production consent is not enabled yet.
+Updated 2026-09-09: production connector and consent are working. The production
+release candidate is installed locally alongside staging and authenticated reads
+passed. It is not yet submitted, approved, or publicly published.
 
-## Reserved Infrastructure (2026-09-08)
+## Verified Infrastructure
 
 - Railway project: d14fd246-18fd-4e89-a70c-ba014ee0b4fc.
 - Production environment: ce88d1a0-6757-4716-ad8f-24ccbafb79d8.
@@ -11,17 +12,31 @@ plugin and its manifest still target staging. Production consent is not enabled 
 - Owner-approved hostname: mcp.mylister.dev, target container port 8080.
 - Required DNS: CNAME mcp.mylister.dev -> pea5lhnk.up.railway.app.
 - Railway confirms the CNAME has propagated and domain routing is ACTIVE.
-- Ownership remains unverified; certificate is VALIDATING_OWNERSHIP. Add the TXT
-  record returned by `railway domain status mcp.mylister.dev` at `_railway-verify.mcp`.
+- DNS ownership and TLS certificate verification succeeded; normal HTTPS works.
 - Atlas reconnection succeeded. The new user `mylister_connector_prod` has only
   readWrite on `mylister_connector_prod`, scoped to the Lister cluster; roles read back.
 - Independent production shared/encryption secrets and the restricted database URI
   are stored in the connector's Railway variables, not this repository.
 - Connector deployment `2f350ebd-0888-4d51-a829-77f4e8d1299f` reached SUCCESS.
-- 21 local connector tests passed; the optional Mongo test was skipped.
-- Public HTTPS smoke checks have NOT passed: local lookup failed, and direct routing
-  with normal TLS validation reported a certificate mismatch. No TLS checks bypassed.
-- Production private API variables remain unchanged until connector HTTPS is valid.
+- Eight production boundary smoke checks passed after consent configuration rollout.
+- Local connector suite: 23 passed, zero failed, one optional Mongo test skipped;
+  includes both staging and production packaging isolation checks.
+- Private API configuration deployment `0202dd9b-455d-4c13-8fa9-e93a48322a30`
+  reached SUCCESS using existing code `da1498f`. No older checkout was uploaded.
+- Private API URL and resolved secret were read back. Its shared secret references
+  the connector's existing Railway variable; no secrets were written to this repo.
+
+## Installed And Authenticated
+
+- Production package: `plugins/mylister-production`, version `0.1.0-rc.1`.
+- Plugin and skill validators passed; installed as `mylister-production@personal`.
+- The production browser consent page displayed the actual account and permissions.
+  The user approved; `codex mcp login mylister-production` completed successfully.
+- A fresh Codex acceptance run used the installed production server, not staging:
+  `get_lists_summary` passed (31 lists); `get_priority_items` passed (5 items).
+  Both returned without tool errors. Account content was omitted from the report.
+- No production content was created, edited, deleted, shared, or emailed in this round.
+- Staging installation and account connection remain separate and unchanged.
 
 ## Verified Baseline
 
@@ -33,28 +48,42 @@ plugin and its manifest still target staging. Production consent is not enabled 
 ## Configuration Decisions
 
 - Public REST origin remains https://api.mylister.dev, using X-API-Key only.
-- Approved connector origin: https://mcp.mylister.dev, pending certificate verification.
+- Verified connector origin: https://mcp.mylister.dev.
 - Verified private origin: http://lister-api-private-prod.railway.internal:80.
 - Verified production UI domain: app.mylister.dev; consent uses /integrations/authorize.
-- Configure the private API's connector URL/shared secret together with the connector.
-- Configure exact approved callbacks and origins, with explicit native-loopback policy.
+- Private API connector URL/shared secret configured, with native-loopback callbacks enabled.
+- Exact approved HTTPS callback and browser origins remain restricted.
 - Preserve staging service, database, credentials and existing installed connection.
 
-## Release Checks
+## Remaining Submission Gates
 
-1. Resolve hostname and infrastructure, deploy connector, verify SUCCESS and health.
-2. Verify issuer/resource metadata and API-key-only/private endpoint boundaries.
-3. Approve a fresh production OAuth connection in the browser; never reuse staging tokens.
-4. Exercise controlled production fixtures only after approval. Confirm outbound email
-   recipients before any sending test. Avoid restarting shared production services for QA.
-5. Complete isolated outage/retry and expiry tests plus feature/permission gaps from
+1. Exercise controlled production write fixtures only after approval. Confirm outbound
+   recipients before sending tests. Do not restart shared production services for QA.
+2. Complete isolated outage/retry and expiry tests plus feature/permission gaps from
    STAGING-VERIFICATION.md. Recheck both comment fixes after the other agent delivers them.
-6. Create production plugin packaging without changing the installed staging package
-   or advertising an endpoint before it works. Validate tool annotations and contract.
-7. Assemble verified publisher identity, listing/policy/support details, starter prompts,
-   five positive and three negative reviewer cases, and reviewer account access.
+3. Review each tool's annotations semantically. Current method-derived hints are
+   conservative, not a completed review; POST download exports are read-only, for example.
+   Deploy any corrections and scan the final metadata in the submission portal.
+4. Confirm verified publisher identity, Apps Management write access, public policy,
+   terms/support URLs, country availability, and backup/encryption-key recovery procedure.
+5. Prepare reviewer access without MFA, SMS or email OTP. Run the committed
+   [five positive and three negative cases](tests/PRODUCTION-REVIEWER-CASES.md) on
+   disposable fixtures and record results; the test plan alone is not passing evidence.
+6. Complete any OpenAI portal-issued domain challenge. Railway DNS verification does
+   not replace OpenAI ownership verification; use only the exact issued challenge token.
+7. Upload the production skill with the MCP endpoint after owner sign-off. Submission
+   and publication after review approval are separate actions, neither performed here.
+
+Workspace domain restrictions additionally require the documented UserInfo/email
+claims and scopes. This connector currently uses only the `mylister` scope; do not
+advertise workspace-domain restriction support without implementing and testing it.
+
+References checked 2026-09-09:
+[submission requirements](https://developers.openai.com/plugins/deploy/submission),
+[remote server review](https://developers.openai.com/plugins/deploy/app-review).
 
 Production deployment, authenticated verification and submission are separate milestones.
 
 Run `node connector/scripts/smoke-staging.mjs --production` from the repository root
-after HTTPS is ready. Without the explicit flag the script still checks staging.
+for read-only boundary checks. Without the explicit flag the script still checks staging.
+Start a new Codex task to load the installed production skill and tools.

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mylister-production": {
+      "type": "http",
+      "url": "https://mcp.mylister.dev/mcp"
+    }
+  }
+}

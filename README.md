@@ -69,7 +69,13 @@ Start a new Hermes session and use `/lister` or describe the task normally. Herm
 
 ### Codex
 
-For the current repository, install it as a **standalone Codex skill**:
+The OAuth plugin release candidate is in [`plugins/mylister-production`](plugins/mylister-production).
+It connects to `https://mcp.mylister.dev/mcp` through MyLister account consent;
+no API key is entered in chat. It is not yet published in the public directory.
+The separate `plugins/mylister` package remains staging-only.
+See [production readiness](connector/PRODUCTION-READINESS.md) for verification and remaining release gates.
+
+For an API-key-based **standalone Codex skill**, use:
 
 ```bash
 git clone https://github.com/mgoettel13/MyLister-Skill.git "$CODEX_HOME/skills/lister"
