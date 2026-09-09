@@ -244,6 +244,24 @@ OAuth grants, emails, server interruption or production changes.
 - Disposable project `6a9ec99b2ec7b350b4300109` and its attachment were deleted;
   item `6a9ec9a72ec7b350b430010c` subsequently returned 404. No older QA data was deleted.
 
+### File Byte Round Trip And Safe Errors: 2026-09-09
+
+- Connector `2e2afcf` deployment `94ba4212-c18c-4ff7-a0bf-336aab7c7c3e`
+  reached SUCCESS; all eight staging boundary checks passed.
+- Existing installed staging OAuth created project `6aa1333d2ec7b350b4300110`,
+  item `6aa133492ec7b350b4300113` with an initial note and project date/duration.
+- Uploaded the committed `tests/fixtures/qa-note.csv` to that note. Attachment
+  metadata persisted on get_item readback (one attachment, correct file key).
+- Authenticated get_file returned exactly `label,value\nstaging-only,42\n`,
+  matching all 28 original ASCII bytes. Original SHA-256:
+  `600B55CD47FCF6E7AAE3272FB7D58A05EEC666CDA9D21BAB41D4074BDF6DB4F8`.
+- Removed the attachment; readback showed zero attachments and get_file returned
+  404. Deleted the project; get_item subsequently returned 404. All new fixtures cleaned.
+- A synthetic invalid get_item ID returned the new safe 404 guidance, without
+  forwarding the upstream JSON error body. No account data or emails were involved.
+- This closes the CSV byte-integrity gap for this pathway. It does not prove every
+  media type, shared-user file access, printed export, or email delivery.
+
 ### Outstanding Gates
 
 - Extend permission testing to

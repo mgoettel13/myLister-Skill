@@ -94,6 +94,16 @@ passed. It is not yet submitted, approved, or publicly published.
 - Submission copy and byte-verified bundle hashes are in
   [SUBMISSION-PACKET.md](SUBMISSION-PACKET.md). Packaging is complete; reviewer
   test execution and publisher/legal attestations are not implied by those artifacts.
+- Connector error privacy hardening: `2e2afcf` removes upstream error bodies from
+  tool responses. Regression evidence and scope limits are documented in
+  [FAILURE-PATH-VERIFICATION.md](FAILURE-PATH-VERIFICATION.md): 31 tests pass,
+  one optional Mongo test skipped; no production outage was induced.
+  Production deployment `66dabc5f-dbbf-4684-b10b-bdd8ff003b96` reached SUCCESS;
+  safe 404 guidance and an authenticated priority read passed after rollout.
+  All eight boundary checks and 58-tool metadata/schema comparison also passed.
+- Staging authenticated CSV upload/download now matches all 28 fixture bytes;
+  attachment/project cleanup and safe 404 error guidance passed. See the dated
+  [staging file round trip](STAGING-VERIFICATION.md).
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not

@@ -27,6 +27,19 @@ real production secrets were observed leaking.
   receives a one-second access lifetime, then rejects access/refresh at the boundary
   even while the connection record is still active and cleanup has not run.
 
+## Deployed Checks
+
+- Staging deployment `94ba4212-c18c-4ff7-a0bf-336aab7c7c3e` and production
+  deployment `66dabc5f-dbbf-4684-b10b-bdd8ff003b96` reached SUCCESS from `2e2afcf`.
+- Eight boundary checks passed in each environment. Production's 58 tool schemas
+  and annotations still exactly match the reviewed build.
+- Both environments returned the exact safe 404 guidance for a synthetic invalid
+  get_item ID. In production the installed Codex plugin also completed an authenticated
+  priority read after the rollout. A negative get_item tool call is expected to be
+  marked failed by the client; the assertion passes because its denial is correct.
+- A real staging note CSV upload/download returned all original fixture bytes;
+  follow-up deletion and readback are recorded in STAGING-VERIFICATION.md.
+
 ## Scope Limits
 
 These are real local HTTP transports with an in-memory grant store and controlled
