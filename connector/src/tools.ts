@@ -3,6 +3,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js';
 import type { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { annotationsFor } from './tool-annotations.js';
 
 type Schema = Record<string, unknown>;
 interface Operation {
@@ -76,10 +77,7 @@ for (const [path, methods] of Object.entries(contract.paths)) {
       description: `${operation.description ?? operation.summary ?? name}\nUses ${method.toUpperCase()} ${path}.`,
       inputSchema,
       _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['mylister'] }] },
-      annotations: {
-        readOnlyHint: method === 'get', destructiveHint: method !== 'get',
-        idempotentHint: ['get', 'put', 'delete'].includes(method), openWorldHint: true,
-      },
+      annotations: annotationsFor(name),
     };
     operations.set(name, { tool, method: method.toUpperCase(), path, multipart, validate: ajv.compile(inputSchema) });
   }
