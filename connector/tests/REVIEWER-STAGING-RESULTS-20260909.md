@@ -15,7 +15,7 @@ its commit metadata was `local`, so that response does not establish a Git SHA.
 | Journal entry | Created in a disposable notebook; fresh get_item returned all 74 characters, including leading/trailing spaces, exactly unchanged. | PASS |
 | Call Mama / priority | Created once in a disposable standard list, patched only isPriority, queried priorities, and read the list back. Exactly one item remained, with the exact content and isPriority true; its ID appeared in priority results. | PASS |
 | Project with initial note | Created Prepare launch with notes containing Review checklist. Fresh get_item returned exactly that note. No project dates or assignee IDs were sent; the API defaulted the assignee to the creator. | PASS |
-| Shared-note comment / browser reload | Not exercised during this run. | PENDING |
+| Shared-note comment / browser reload | Follow-up at 10:43 UTC: comment created through MCP and read through get_note_comments; second account saw the exact text and author before and after full browser reload. Read-only note dialog offered no composer or edit controls. | PASS in staging |
 | HTML export | Newly created list with description null returned HTTP 500. Adding a description to the same fixture made the HTML export return 12,401 characters including Call Mama. No browser/print rendering or email delivery was tested. | FAIL for nullable description |
 
 The three negative reviewer cases remain separate gates. This run did not revoke
@@ -62,3 +62,27 @@ All three lists created by this run were deleted successfully:
 Fresh reads of the respective item IDs `6aa136082ec7b350b4300118`,
 `6aa136162ec7b350b4300119`, and `6aa136182ec7b350b430011c` all returned safe 404
 responses. Older fixtures, staging grants, and production content were untouched.
+
+## Shared-Comment Follow-Up
+
+Using the same installed staging MCP account, created project
+`6aa138492ec7b350b430011d`, item `6aa1384c2ec7b350b4300120`, and embedded note
+`6aa1384c2ec7b350b430011f`.
+The authorized second account was verified in the normal browser and shared-list
+user response before testing. Only this disposable list was shared with READ access.
+
+MCP added comment `6aa138512ec7b350b4300122` containing `Review complete`.
+Fresh get_note_comments returned the exact text and creator. The second account's
+note-comments dialog showed the same text and actual creator name, both before and
+after a full page reload and reopening the dialog. No `Someone` placeholder was
+shown. There were no note-comment edit or composer controls for the READ account.
+This is UI visibility/persistence evidence, not exhaustive API write-denial coverage.
+
+Browser version metadata reported private API deployment
+`0c8ca057-b750-4ccf-a59e-035d69e591f2` and local commit metadata; no source SHA is
+inferred from that string. This does not resolve the separate cross-author editing
+and failed-save-draft findings.
+
+Cleanup removed the second account's access; get_list_users then contained only
+the owner. Deleted the project and confirmed get_item returned 404. Both installed
+grants were preserved. No message or email was sent.

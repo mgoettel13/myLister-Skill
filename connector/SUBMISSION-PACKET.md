@@ -67,7 +67,8 @@ unfinished coverage. Neither bundle generation nor portal tool scan proves relea
 
 ## Owner Sign-Off
 
-- Sign in at https://platform.openai.com/plugins; verify publisher identity and role.
+- Complete publisher identity verification in the intended OpenAI organization;
+  confirm the submitter role before returning to https://platform.openai.com/plugins.
 - Provide approved public privacy, terms and support URLs and permitted regions.
 - Supply reviewer access and approve any production fixture/email testing.
 - Resolve the two newer comment findings and complete remaining regression coverage.
@@ -76,3 +77,17 @@ unfinished coverage. Neither bundle generation nor portal tool scan proves relea
 
 No submission form has been created or attested by this agent.
 Source: [OpenAI submission guide](https://developers.openai.com/plugins/deploy/submission).
+
+## Portal Check (2026-09-09)
+
+The internal browser is now signed in, with project `MyLister.dev` selected under
+the `Personal` organization. Selecting Create plugin > With MCP displays
+`Complete identity verification` and blocks draft creation. The organization
+settings page offers Individual and Business verification, both with Start buttons.
+Neither verification flow was started by the agent; no identity documents, legal
+attestations, account changes, or submission uploads were provided.
+
+The owner must choose the intended publisher identity (and organization, if this
+is not the intended one) and complete verification. Once verified, resume creation
+of the MCP-backed draft, upload the prepared skill, and obtain the actual domain
+challenge. Publisher role and domain verification are not established by sign-in.

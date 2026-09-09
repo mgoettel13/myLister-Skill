@@ -90,6 +90,9 @@ passed. It is not yet submitted, approved, or publicly published.
   Their fixes cannot be marked deployed or verified yet.
 - OpenAI submission portal redirects to login; publisher identity, role and domain
   challenge are not yet inspectable. Owner sign-in is needed, not credentials in chat.
+  Follow-up: sign-in is now available, but Create plugin > With MCP is blocked by
+  missing developer identity verification in the selected organization. Individual
+  and Business verification await owner action; no draft or challenge was created.
 - The rendered production marketing homepage has no privacy, terms or support links.
   Public approved URLs must be provided or published; absence of homepage links alone
   does not prove those documents do not exist elsewhere.
@@ -111,6 +114,10 @@ passed. It is not yet submitted, approved, or publicly published.
   initial-note readback. HTML export failed for a normal null list description.
   API fix `3752ebd` is pushed in PR #12 with 70 focused tests passing; it is not
   merged or deployed. All fixtures from that run were deleted and read back as 404.
+- The shared-note reviewer follow-up also passed: the authorized second account
+  saw the exact comment text and actual author after a full browser reload. READ
+  note-comment controls were absent. Test sharing was removed, the fixture deleted,
+  and item readback returned 404. This does not close the separate two comment bugs.
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not
