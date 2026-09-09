@@ -61,6 +61,8 @@ passed. It is not yet submitted, approved, or publicly published.
    recipients before sending tests. Do not restart shared production services for QA.
 2. Complete isolated outage/retry and expiry tests plus feature/permission gaps from
    STAGING-VERIFICATION.md. Recheck both comment fixes after the other agent delivers them.
+   The nullable-description HTML export regression also requires merge, deployment,
+   and live recheck: [API PR #12](https://github.com/mgoettel13/lister-api/pull/12).
 3. Per-tool annotation review is complete in [TOOL-ANNOTATIONS.md](TOOL-ANNOTATIONS.md).
    Staging deployment `e631756a-2703-4dd5-ab34-81458473183a` reached SUCCESS;
    all 58 live tool schemas/annotations match the reviewed build through Codex.
@@ -104,6 +106,11 @@ passed. It is not yet submitted, approved, or publicly published.
 - Staging authenticated CSV upload/download now matches all 28 fixture bytes;
   attachment/project cleanup and safe 404 error guidance passed. See the dated
   [staging file round trip](STAGING-VERIFICATION.md).
+- Further [staging reviewer workflows](tests/REVIEWER-STAGING-RESULTS-20260909.md)
+  passed Journal text preservation, Call Mama priority/create-once, and project
+  initial-note readback. HTML export failed for a normal null list description.
+  API fix `3752ebd` is pushed in PR #12 with 70 focused tests passing; it is not
+  merged or deployed. All fixtures from that run were deleted and read back as 404.
 
 Workspace domain restrictions additionally require the documented UserInfo/email
 claims and scopes. This connector currently uses only the `mylister` scope; do not
