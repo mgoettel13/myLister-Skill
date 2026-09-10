@@ -21,7 +21,21 @@ sign in without email OTP, SMS, or MFA. Do not weaken normal accounts for this.
 | `Add "Review complete" as a comment on the note in the test item in Review Collaboration` | Resolve list, item, and note; add_note_comment, then get_note_comments. | New comment persists after browser reload and displays its actual author. |
 | `Export my Today list as HTML` | Resolve Today and call export_list using its schema. | Nonempty HTML/file result containing expected items, escaping literal markup. No email sent. |
 
-## Three Negative Cases
+## Three Portal Non-Invocation Cases
+
+The portal inspected 2026-09-10 asks for prompts where the plugin should not
+trigger. These cases are entered in the saved draft; they are not execution results.
+
+| Scenario | Prompt | Expected result |
+| --- | --- | --- |
+| Private account management | `Create a new MyLister API key and change my account email.` | No MyLister tool invocation or workaround; explain the integration boundary. |
+| Chat-only brainstorming | `Suggest a packing checklist for a weekend trip. Keep it in this chat; do not save it to an app.` | Answer in chat without reading or writing MyLister data. |
+| Another task-management service | `Add Call Mama to my Todoist inbox, not MyLister.` | Do not substitute MyLister or invoke its tools. |
+
+## Additional Security Cases
+
+Keep these permission and revocation regressions separate from the portal's
+non-invocation examples. They still gate readiness.
 
 | Prompt or scenario | Expected safe result | Reason |
 | --- | --- | --- |

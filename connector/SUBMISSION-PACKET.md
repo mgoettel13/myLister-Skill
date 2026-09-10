@@ -1,6 +1,6 @@
 # MyLister.dev Submission Packet
 
-Draft prepared 2026-09-09. Not submitted or published. Owner approval is required
+Draft created in the OpenAI portal 2026-09-10. Not submitted or published. Owner approval is required
 for publisher identity, legal attestations, reviewer access and public availability.
 
 ## Listing Copy
@@ -9,7 +9,7 @@ for publisher identity, legal attestations, reviewer access and public availabil
 | --- | --- |
 | Display name | MyLister.dev |
 | Category | Productivity |
-| Short description | Lists, projects, and shared notes in MyLister.dev. |
+| Short description | Lists, projects, and notes |
 | Description | Connect your MyLister.dev account to manage tasks, projects, journal entries, notes, priorities, comments, sharing, sending, reminders, and attachments. Your existing account and shared-list permissions apply. |
 | Website | https://mylister.dev |
 | MCP URL | https://mcp.mylister.dev/mcp |
@@ -67,15 +67,15 @@ unfinished coverage. Neither bundle generation nor portal tool scan proves relea
 
 ## Owner Sign-Off
 
-- Complete publisher identity verification in the intended OpenAI organization;
-  confirm the submitter role before returning to https://platform.openai.com/plugins.
+- Review the selected verified publisher identity in the saved draft.
 - Provide approved public privacy, terms and support URLs and permitted regions.
 - Supply reviewer access and approve any production fixture/email testing.
 - Resolve the two newer comment findings and complete remaining regression coverage.
 - Complete the exact OpenAI domain challenge if issued, scan tools, upload skills,
   review the draft and authorize submission. Publication follows approval separately.
 
-No submission form has been created or attested by this agent.
+The submission draft has been created; no legal attestations or submission have
+been made by this agent.
 Source: [OpenAI submission guide](https://developers.openai.com/plugins/deploy/submission).
 
 ## Portal Check (2026-09-09)
@@ -91,3 +91,37 @@ The owner must choose the intended publisher identity (and organization, if this
 is not the intended one) and complete verification. Once verified, resume creation
 of the MCP-backed draft, upload the prepared skill, and obtain the actual domain
 challenge. Publisher role and domain verification are not established by sign-in.
+
+## Saved Portal Draft (2026-09-10)
+
+This supersedes the identity-verification gate in the historical check above.
+The owner completed verification; the draft uses the verified Individual identity
+in the Personal organization with project MyLister.dev selected.
+
+- [Open the draft](https://platform.openai.com/plugins/edit/asdk_app_6aa290be8fbc81918c133a767a2accb1/asdk_app_v_6aa290c024708191bf0cc110d73a0d34?section=App%20Info).
+- Listing name, subtitle, description, Productivity category, website, verified
+  author, three starter prompts, and initial-release notes are saved.
+- Portal version is `0.1.0`: the form rejected `0.1.0-rc.1`. Local packages and
+  installed plugins remain `0.1.0-rc.1`; no release was published or rebuilt.
+- Directory and composer icons were uploaded from the existing UI repository's
+  `public/mylister-logo-512.png`. The packaged 180px icon is below the directory's
+  256px minimum. Both uploaded icons were read back in the portal.
+- The skill-only ZIP listed above was uploaded. Its safety scan shows **Passed**.
+- MCP URL `https://mcp.mylister.dev/mcp` and OAuth are saved. Metadata discovery
+  works; enterprise domain restrictions are unavailable, as expected.
+- Tool scanning requests a new OAuth authorization. It was canceled pending
+  explicit owner approval; no new grant or tool scan was completed.
+- Domain verification remains incomplete. The issued token is visible on the
+  draft's MCP page and must be served at
+  `https://mcp.mylister.dev/.well-known/openai-apps-challenge` before verification.
+  No connector deployment or challenge publication was performed in this session.
+- Five positive and three non-invocation negative cases are drafted. They describe
+  expected behavior, not completed production reviewer-account results.
+- Reviewer credentials, approved privacy/terms/support URLs, and a demo recording
+  URL remain blank. Do not use a real user's personal account as reviewer access.
+- Country availability is the portal's unchanged **Allow all** default and still
+  requires owner review. All policy attestations remain unchecked.
+
+Draft autosave and field readback do not establish production acceptance or
+submission readiness. Complete the outstanding regression and reviewer checks in
+[PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) before submission.

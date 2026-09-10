@@ -136,6 +136,19 @@ References checked 2026-09-09:
 
 Production deployment, authenticated verification and submission are separate milestones.
 
+## Submission Draft Progress (2026-09-10)
+
+Publisher identity verification is complete and the actual OpenAI submission draft
+now exists. See [SUBMISSION-PACKET.md](SUBMISSION-PACKET.md) for its link and saved
+fields. The uploaded skill passed the portal safety scan. Listing metadata, icons,
+prompts, release notes and test-case expectations are populated.
+
+The OAuth tool scan still requires owner authorization; domain verification,
+reviewer account execution, approved privacy/terms/support links, demo recording,
+country review and legal attestations remain unfinished. No production deployment,
+submission or publication occurred during draft preparation. Earlier API PR and
+regression statuses above have not been reverified by this documentation update.
+
 Run `node connector/scripts/smoke-staging.mjs --production` from the repository root
 for read-only boundary checks. Without the explicit flag the script still checks staging.
 Start a new Codex task to load the installed production skill and tools.
