@@ -11,7 +11,7 @@
   },
   "keywords": ["openclaw", "codex", "skill", "lister", "task-management"],
   "engines": { "node": ">=22.13.0" },
-  "files": ["dist", "!dist/**/*.test.*", "SKILL.md", "README.md", "skill.json"],
+  "files": ["dist", "!dist/**/*.test.*", "SKILL.md", "README.md", "references", "skill.json"],
   "author": "Larry",
   "license": "MIT",
   "dependencies": {

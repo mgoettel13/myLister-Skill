@@ -7,6 +7,8 @@ description: Manage MyLister lists, notebooks, projects, tasks, notes, prioritie
 
 Use this skill's Node.js client for API calls and local encryption. Requires Node.js 22.13 or later. Install the complete skill folder and run `npm ci` there once; the prepare script builds `dist/index.js`.
 
+For a new installation, update, missing runtime, or incomplete setup on Dot/OpenClaw, first follow [the agent installation guide](references/agent-installation.md). It covers host and skills-directory discovery, private credential delivery, persistent local identity storage, staging approval, and verification from a fresh task/session.
+
 ## Setup
 
 Each installation has its own MyLister API key, managed in **MyLister Settings > API Keys**. Access covers the user's existing and future account content with their current rights. Shared-list read-only permissions remain read-only. There are no per-list integration grants.
