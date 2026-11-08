@@ -4,11 +4,15 @@ One generic API client and skill for Dot, OpenClaw, Codex, and other hosts suppo
 
 ## Install
 
+**Agents installing for Dot or OpenClaw:** follow the [agent installation guide](references/agent-installation.md) to find the actual skills directory, configure credentials privately, and complete staging enrollment. Users can give their agent this request:
+
+> Install the generic MyLister skill from https://github.com/mgoettel13/myLister-Skill for staging. Follow references/agent-installation.md. Find this host's actual skills directory, build the complete client, configure the staging key through private secret entry, and verify discovery and encrypted access. Give me the approval link and fingerprint when my passkey approval is needed. Do not ask me to paste the key into chat.
+
 Requires Node.js 22.13 or later.
 
 ```sh
-git clone https://github.com/mgoettel13/MyLister-Skill.git
-cd MyLister-Skill
+git clone https://github.com/mgoettel13/myLister-Skill.git
+cd myLister-Skill
 npm ci
 ```
 
