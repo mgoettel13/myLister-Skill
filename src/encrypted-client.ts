@@ -200,23 +200,38 @@ class EncryptedTransport {
   private async route(listId: string): Promise<Obj> {
     id(listId);
     if (this.routes.has(listId)) return this.routes.get(listId)!;
-    const manifest = object(await this.request(`${CRYPTO}/content-route-manifest`, 'POST', { listIds: [listId] }));
-    const route = manifest.decisions?.[0];
-    if (manifest.routeManifestVersion !== 1 || manifest.requestedCount !== 1 || manifest.decisionCount !== 1
-      || manifest.decisions.length !== 1 || route?.listId !== listId || route.route !== 'client' || route.reason !== 'ready'
-      || ![1, 2, 3].includes(route.schemaVersion) || route.viewerUserId !== this.context.userId) fail('The private list route is unavailable. No plaintext fallback was attempted.', 423);
-    id(route.keyId); id(route.ownerAccountId); id(route.ownerUserId);
-    if (typeof route.authoritativeRevision !== 'string' || typeof route.membershipGrantId !== 'string'
-      || !Number.isSafeInteger(route.activationVersion) || !Number.isSafeInteger(route.ownerManifestEpoch)
-      || !Number.isSafeInteger(route.viewerEnvelopeVersion) || !/^[0-9a-f]{64}$/.test(route.viewerEnvelopeFingerprint)) fail('Invalid private route binding.', 502);
+    await this.loadRoutes([listId]);
+    return this.routes.get(listId)!;
+  }
+  private async loadRoutes(listIds: string[]): Promise<Obj> {
+    if (!listIds.length || listIds.length > 100 || new Set(listIds).size !== listIds.length) fail('Invalid private list batch.', 502);
+    listIds.forEach(id);
+    const manifest = object(await this.request(`${CRYPTO}/content-route-manifest`, 'POST', { listIds }));
+    if (manifest.routeManifestVersion !== 1 || manifest.requestedCount !== listIds.length || manifest.decisionCount !== listIds.length
+      || !Array.isArray(manifest.decisions) || manifest.decisions.length !== listIds.length) fail('The private list route is unavailable. No plaintext fallback was attempted.', 423);
+    const routes = new Map<string, Obj>();
+    for (const route of manifest.decisions) {
+      if (!route || !listIds.includes(route.listId) || routes.has(route.listId) || route.route !== 'client' || route.reason !== 'ready'
+        || ![1, 2, 3].includes(route.schemaVersion) || route.viewerUserId !== this.context.userId) fail('The private list route is unavailable. No plaintext fallback was attempted.', 423);
+      id(route.keyId); id(route.ownerAccountId); id(route.ownerUserId);
+      if (typeof route.authoritativeRevision !== 'string' || typeof route.membershipGrantId !== 'string'
+        || !Number.isSafeInteger(route.activationVersion) || !Number.isSafeInteger(route.ownerManifestEpoch)
+        || !Number.isSafeInteger(route.viewerEnvelopeVersion) || !/^[0-9a-f]{64}$/.test(route.viewerEnvelopeFingerprint)) fail('Invalid private route binding.', 502);
+      routes.set(route.listId, route);
+    }
     const batch = object(await this.request(`${RAW}/list-key-envelopes`, 'POST', { routeManifest: manifest }));
-    const envelope = batch.envelopes?.find((e: Obj) => e.listId === listId);
-    if (!envelope || envelope.keyId !== route.keyId || envelope.envelopeVersion !== 1 || envelope.transportVersion !== 1
-      || envelope.version !== route.viewerEnvelopeVersion || envelopeFingerprint(envelope.envelope) !== route.viewerEnvelopeFingerprint) fail('The private list key is unavailable or changed. Read the list again.', 423);
-    const key = await unwrapListKey(envelope.envelope, this.root, { accountId: this.context.userId, userId: this.context.userId, listId, keyId: route.keyId });
-    this.envelopes.set(listId, envelope.envelope);
-    this.routes.set(listId, route); this.keys.set(listId, key);
-    return route;
+    if (batch.routeManifestVersion !== 1 || !Array.isArray(batch.envelopes) || batch.envelopes.length !== listIds.length) fail('The private list key is unavailable or changed. Read the list again.', 423);
+    const seen = new Set<string>();
+    for (const envelope of batch.envelopes) {
+      const route = routes.get(envelope?.listId);
+      if (!route || seen.has(envelope.listId) || envelope.keyId !== route.keyId || envelope.envelopeVersion !== 1 || envelope.transportVersion !== 1
+        || envelope.version !== route.viewerEnvelopeVersion || envelopeFingerprint(envelope.envelope) !== route.viewerEnvelopeFingerprint) fail('The private list key is unavailable or changed. Read the list again.', 423);
+      seen.add(envelope.listId);
+      const key = await unwrapListKey(envelope.envelope, this.root, { accountId: this.context.userId, userId: this.context.userId, listId: envelope.listId, keyId: route.keyId });
+      this.envelopes.set(envelope.listId, envelope.envelope);
+      this.routes.set(envelope.listId, route); this.keys.set(envelope.listId, key);
+    }
+    return manifest;
   }
   private query(route: Obj): string {
     const values = { routeManifestVersion: 1, ...pick(route, ['authoritativeRevision', 'route', 'schemaVersion', 'keyId', 'activationVersion', 'ownerManifestEpoch', 'membershipGrantId', 'viewerUserId', 'viewerEnvelopeVersion', 'viewerEnvelopeFingerprint']) };
@@ -429,6 +444,34 @@ class EncryptedTransport {
     }
     return data;
   }
+  private async listMetadata(includeArchived: boolean): Promise<Obj[]> {
+    const index = (await this.lists()).filter(row => includeArchived || !row.archived);
+    const result = new Map<string, Obj>();
+    const routeFields = ['listId', 'ownerAccountId', 'ownerUserId', 'authoritativeRevision', 'route', 'schemaVersion', 'keyId',
+      'activationVersion', 'ownerManifestEpoch', 'membershipGrantId', 'viewerUserId', 'viewerEnvelopeVersion', 'viewerEnvelopeFingerprint'];
+    for (let offset = 0; offset < index.length; offset += 100) {
+      const listIds = index.slice(offset, offset + 100).map(row => row.id);
+      const manifest = await this.loadRoutes(listIds);
+      for (const entry of index.slice(offset, offset + 100)) {
+        const route = this.routes.get(entry.id)!;
+        if (typeof entry.isOwner !== 'boolean' || !['read', 'edit', 'admin'].includes(entry.permission)
+          || entry.membershipGrantId !== route.membershipGrantId
+          || entry.isOwner !== (route.membershipGrantId === 'owner')
+          || (entry.isOwner && entry.permission !== 'admin')) fail('The private list membership changed. Read it again.', 502);
+      }
+      const home = object(await this.request(`${RAW}/home`, 'POST', { listIds, itemLimit: 1, includeArchived, routeManifest: manifest }));
+      if (home.routeManifestVersion !== 1 || !Array.isArray(home.lists) || home.lists.length !== listIds.length) fail('The private list index changed. Read it again.', 502);
+      for (const row of home.lists) {
+        const route = this.routes.get(row?.id);
+        if (!route || !listIds.includes(row.id) || result.has(row.id) || !row.route
+          || routeFields.some(field => row.route[field] !== route[field])) fail('The private list route changed. Read it again.', 502);
+        this.validateRecord(row, route);
+        const { route: _route, ...list } = row;
+        result.set(row.id, await this.fields(list, route, 'lists', 'open'));
+      }
+    }
+    return index.map(row => ({ ...result.get(row.id)!, isOwner: row.isOwner, userPermission: row.permission }));
+  }
   private exportHtml(name: string, groups: Array<{ list: Obj; items: Obj[] }>): string {
     const comments = (values: Obj[] = []) => values.map(c => `<p>${escaped(c.content)}</p>`).join('');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escaped(name)}</title></head><body><h1>${escaped(name)}</h1>${groups.map(g => `<section><h2>${escaped(g.list.name)}</h2><p>${escaped(g.list.description)}</p>${g.items.map(item => `<article><h3>${escaped(item.content)}</h3>${comments(item.comments)}${(item.notes ?? []).map((note: Obj) => `<div><p>${escaped(note.content)}</p>${comments(note.comments)}</div>`).join('')}</article>`).join('')}</section>`).join('')}</body></html>`;
@@ -460,7 +503,7 @@ class EncryptedTransport {
     }
     const includeArchived = query.get('includeArchived') === 'true' || query.get('include_archived') === 'true' || body.includeArchived === true;
     if (path === '/v1/lists' && method === 'POST') return json({ success: true, data: await this.createList(body) });
-    if (path === '/v1/lists' && method === 'GET') return json({ success: true, data: (await this.all(includeArchived)).map(g => g.list) });
+    if (path === '/v1/lists' && method === 'GET') return json({ success: true, data: await this.listMetadata(includeArchived) });
     if (path === '/v1/lists/summary' && method === 'GET') return json({ success: true, data: (await this.all(includeArchived)).map(g => ({ ...g.list, itemCount: g.items.length, completedCount: g.items.filter(i => i.status === 'complete').length })) });
     if (/^\/v1\/items\/priority(?:\/export(?:\/email)?)?$/.test(path) || path === '/v1/search') {
       let groups = await this.all(includeArchived);

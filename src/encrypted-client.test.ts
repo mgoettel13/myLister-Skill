@@ -85,6 +85,7 @@ async function fixture(options: { items?: number; permission?: string; schema?: 
   const listKeys = new Map<string, Obj>([[listId, { key: listBytes, envelope, keyId }]]);
   const reservations = new Map<string, Obj>();
   let count = 1000, failPath = '', emailAmbiguous = false, rejectSourceDelete = false, envelopeMismatch = false, ambiguousDelete = false;
+  let tamperBatch = '';
   let mediaBytes: Uint8Array | undefined;
   const mediaStore = new Map<string, Uint8Array>();
   const receipts = new Map<string, Obj>();
@@ -103,17 +104,36 @@ async function fixture(options: { items?: number; permission?: string; schema?: 
     if (path === failPath) return new Response(JSON.stringify({ detail: 'synthetic failure' }), { status: 503 });
     if (path === '/v1/skill/context') return ok(context);
     if (path === '/v1/crypto/v1/content-route-manifest') {
-      const e = listKeys.get(body.listIds[0])!.envelope;
-      return ok({ routeManifestVersion: 1, requestedCount: 1, decisionCount: 1, decisions: [{ ...route, listId: body.listIds[0], viewerEnvelopeFingerprint: createHash('sha256').update(JSON.stringify({ aad: e.aad, algorithm: e.algorithm, ciphertext: e.ciphertext, iv: e.iv, version: e.version })).digest('hex') }] });
+      const decisions = body.listIds.map((lid: string) => {
+        const e = listKeys.get(lid)!.envelope;
+        return { ...route, listId: lid, viewerEnvelopeFingerprint: createHash('sha256').update(JSON.stringify({ aad: e.aad, algorithm: e.algorithm, ciphertext: e.ciphertext, iv: e.iv, version: e.version })).digest('hex') };
+      });
+      if (tamperBatch === 'manifest') decisions[0].viewerUserId = '0'.repeat(24);
+      return ok({ routeManifestVersion: 1, requestedCount: decisions.length, decisionCount: decisions.length, decisions });
     }
-    if (path === '/v1/crypto/v1/raw-content/list-key-envelopes') return ok({ routeManifestVersion: 1, envelopes: body.routeManifest.decisions.map((r: Obj) => ({ listId: r.listId, keyId, envelopeVersion: 1, transportVersion: 1, version: 1, envelope: envelopeMismatch ? { ...envelope, iv: 'bad' } : listKeys.get(r.listId)?.envelope })) });
+    if (path === '/v1/crypto/v1/raw-content/list-key-envelopes') {
+      const envelopes = body.routeManifest.decisions.map((r: Obj) => ({ listId: r.listId, keyId, envelopeVersion: 1, transportVersion: 1, version: 1, envelope: envelopeMismatch ? { ...envelope, iv: 'bad' } : listKeys.get(r.listId)?.envelope }));
+      if (tamperBatch === 'missing-envelope') envelopes.pop();
+      return ok({ routeManifestVersion: 1, envelopes });
+    }
+    if (path === '/v1/crypto/v1/raw-content/home') {
+      assert.equal(body.itemLimit, 1);
+      const lists = body.routeManifest.decisions.map((r: Obj) => ({ ...rawLists.get(r.listId), route: { ...r } }));
+      if (tamperBatch === 'missing-home') lists.pop();
+      if (tamperBatch === 'duplicate-home' && lists.length > 1) lists[1] = lists[0];
+      if (tamperBatch === 'route-home') lists[0].route.viewerEnvelopeVersion++;
+      // Returned items are deliberately invalid: listing names must not decrypt them.
+      return ok({ routeManifestVersion: 1, lists, itemsByList: { ignored: [{ content: 'not ciphertext' }] } });
+    }
     if (path === '/v1/crypto/v1/raw-content/reservations') {
       const recordId = (++count).toString(16).padStart(24, '0'), reservationId = randomBytes(32).toString('base64url');
       const row = { reservationId, recordId, keyId, purpose: body.purpose, expiresAt: '2099-01-01T00:00:00Z' };
       reservations.set(reservationId, row); return ok(row);
     }
     if (path === '/v1/crypto/v1/raw-content/lists' && method === 'GET') {
-      return ok({ lists: [...rawLists.values()].map(row => ({ id: row.id, isOwner: !options.permission, permission: options.permission ?? 'admin', _contentEncryption: marker, archived: false })), listCount: rawLists.size, hasMore: false, nextCursor: null });
+      const all = [...rawLists.values()];
+      const offset = Number(url.searchParams.get('cursor') || 0);
+      return ok({ lists: all.slice(offset, offset + 100).map(row => ({ id: row.id, isOwner: !options.permission, permission: options.permission ?? 'admin', membershipGrantId: tamperBatch === 'index-grant' ? 'different-grant' : route.membershipGrantId, _contentEncryption: marker, archived: Boolean(row.archived) })), listCount: all.length, hasMore: offset + 100 < all.length, nextCursor: offset + 100 < all.length ? String(offset + 100) : null });
     }
     if (path === '/v1/crypto/v1/raw-content/lists' && method === 'POST') {
       const r = reservations.get(body.reservationId)!;
@@ -201,7 +221,7 @@ async function fixture(options: { items?: number; permission?: string; schema?: 
     assert.fail(`Unexpected plaintext/unsupported request: ${method} ${path}`);
   }) as typeof nodeFetch;
   return { wrapped: createSkillFetch(fetch), calls, context, listBytes, rootBytes, rawLists, rawItems, listKeys, route, key, mediaStore,
-    setFail: (path: string) => { failPath = path; }, setAmbiguousEmail: () => { emailAmbiguous = true; }, rejectDelete: () => { rejectSourceDelete = true; }, setAmbiguousDelete: () => { ambiguousDelete = true; }, corruptEnvelope: () => { envelopeMismatch = true; }, mediaBytes: () => mediaBytes,
+    setFail: (path: string) => { failPath = path; }, setAmbiguousEmail: () => { emailAmbiguous = true; }, rejectDelete: () => { rejectSourceDelete = true; }, setAmbiguousDelete: () => { ambiguousDelete = true; }, corruptEnvelope: () => { envelopeMismatch = true; }, tamper: (kind: string) => { tamperBatch = kind; }, mediaBytes: () => mediaBytes,
     addList: async (target: string) => {
       rawLists.set(target, { ...list, id: target, name: await sealContent('Destination', key, { ...scope(target, ['name'], 'lists'), listId: target }), description: null });
       listKeys.set(target, { key: listBytes, keyId, envelope: await wrapListKey(listBytes, root, { accountId: userId, userId, listId: target, keyId }) });
@@ -260,6 +280,49 @@ test('paged reads, direct item parent lookup and sequential commands open all ci
   assert.match(item.data.data.content, /Private task/);
   const again = await call(f, '/v1/lists'); assert.equal(again.data.data[0].name, 'Private <Work>');
   assert.equal(f.calls.filter(c => c.path === '/v1/skill/context').length, 3);
+});
+
+test('list names use bounded encrypted batches without loading item details', async () => {
+  const f = await fixture({ items: 101 });
+  for (let n = 0; n < 101; n++) await f.addList((n + 2000).toString(16).padStart(24, '0'));
+  const archived = (2100).toString(16).padStart(24, '0');
+  f.rawLists.get(archived)!.archived = true;
+  const active = await call(f, '/v1/lists');
+  assert.equal(active.response.status, 200); assert.equal(active.data.data.length, 101);
+  assert.equal(active.data.data[0].name, 'Private <Work>');
+  assert.equal(active.data.data[0].isOwner, true);
+  assert.equal(active.data.data[0].userPermission, 'admin');
+  assert.equal(active.data.data[1].name, 'Destination');
+  assert.ok(!active.data.data.some((row: Obj) => row.id === archived));
+  assert.deepEqual(f.calls.filter(c => c.path === '/v1/crypto/v1/content-route-manifest').map(c => c.body.listIds.length), [100, 1]);
+  assert.equal(f.calls.filter(c => c.path === '/v1/crypto/v1/raw-content/home').length, 2);
+  assert.ok(f.calls.filter(c => c.path === '/v1/crypto/v1/raw-content/home').every(c => c.body.includeArchived === false));
+  assert.equal(f.calls.filter(c => c.path === '/v1/crypto/v1/raw-content/list-key-envelopes').length, 2);
+  assert.equal(f.calls.filter(c => c.path.startsWith('/v1/crypto/v1/raw-content/lists?')).length, 2);
+  assert.ok(!f.calls.some(c => /\/raw-content\/lists\/[a-f0-9]{24}/.test(c.path)));
+  const all = await call(f, '/v1/lists?includeArchived=true');
+  assert.equal(all.response.status, 200); assert.equal(all.data.data.length, 102);
+  assert.ok(all.data.data.some((row: Obj) => row.id === archived));
+  assert.ok(f.calls.filter(c => c.path === '/v1/crypto/v1/raw-content/home').slice(2).every(c => c.body.includeArchived === true));
+});
+
+test('list metadata retains shared-list ownership and permission', async () => {
+  const f = await fixture({ permission: 'read' });
+  const result = await call(f, '/v1/lists');
+  assert.equal(result.response.status, 200);
+  assert.equal(result.data.data[0].isOwner, false);
+  assert.equal(result.data.data[0].userPermission, 'read');
+});
+
+test('list batches reject missing or altered routes, envelopes, and list records', async () => {
+  for (const kind of ['manifest', 'missing-envelope', 'missing-home', 'duplicate-home', 'route-home', 'index-grant']) {
+    const f = await fixture();
+    await f.addList((2000).toString(16).padStart(24, '0'));
+    f.tamper(kind);
+    const response = await call(f, '/v1/lists');
+    assert.ok(response.response.status >= 400, `${kind} should fail closed`);
+    assert.equal(response.data.data, undefined);
+  }
 });
 
 test('pending, wrong installation, corrupt key and read-only/schema states fail closed', async () => {
