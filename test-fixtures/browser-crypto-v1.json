@@ -1,0 +1,401 @@
+{
+  "provenance": {
+    "generator": "test-fixtures/generate-browser-vectors.cjs",
+    "runtime": "v22.19.0",
+    "sourceSha256": {
+      "src/lib/crypto/apiKeyEnvelope.ts": "7866dd588fde902ae67abbda2007df21a823ec5199c79b6784e2dc865f06f5a7",
+      "src/lib/crypto/content.ts": "0192734f45681c66870f0f9719d826c51903bf3f88570a5f0a0c8717b3b8993f",
+      "src/lib/crypto/accountEnvelope.ts": "b5c1c162954b00c6e5d8e4e9fda9c77f1687cb48d85864a01744dd4ed1e1fa1f",
+      "src/lib/crypto/keyEnvelope.ts": "10a142962d9d2ed30c77177e22d70996fe966a4190395014bd76cf3ce8d4c72e",
+      "src/lib/crypto/exchangeKey.ts": "0abb9cbfedf09599d8fc4655789099dcf478ba603b4f9845df5e2c28ab77a09f",
+      "src/lib/crypto/contentSession.ts": "b5e49277a667d02f5861058024f1f63db50d1d0038445dbe9529efdc37edfde9",
+      "src/lib/auth/privateSession.ts": "3cfe9ef87955ae25ce4f403c961c392074e0a8255bda76b60e9699543be5a32d",
+      "src/lib/crypto/media.ts": "f286a1f2808b2cd1c083c42aef61d9a9bdceb1cc6ad502c3dcc217d586a56e98"
+    },
+    "browserSchemaVersion": 3,
+    "verification": "Actual UI account helper -> Node unwrap; Node list/field/media outputs -> actual UI memory session. All byte comparisons and cross-decryptions passed.",
+    "syntheticOnly": true
+  },
+  "identity": {
+    "publicKey": {
+      "crv": "P-256",
+      "kty": "EC",
+      "x": "axfR8uEsQkf4vOblY6RA8ncDfYEt6zOg9KE5RdiYwpY",
+      "y": "T-NC4v4af5uO5-tKfA-eFivOM1drMV7Oy7ZAaDe_UfU"
+    },
+    "privateScalar": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+    "installationId": "c71d01700fb0328870f1ab580c939eea9786328764946db04470655c732f9743"
+  },
+  "accountScope": {
+    "environment": "interop-ä.example.invalid",
+    "userId": "synthetic-user",
+    "accountKeyId": "account-key-v1"
+  },
+  "accountRoot": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "approval": {
+    "enrollmentId": "synthetic-enrollment",
+    "installationId": "c71d01700fb0328870f1ab580c939eea9786328764946db04470655c732f9743",
+    "accountKeyId": "account-key-v1",
+    "accountKeyEnvelope": {
+      "ephemeralPublicKey": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "lRoVkyBsrJIiaARJKyjAXM6WomfBGNoJNNPdCRN_2j4",
+        "y": "t3X-9xN4a4Lr2YH9WC77DbYegUKKVP7cybHkWVlnFp4"
+      },
+      "salt": "W4ODPx8OcCq6tW0eHVATzEndsFxQd1p-oezNm-RH7xk",
+      "iv": "gW0KgY_ryxlxC7tk",
+      "ciphertext": "jv3wRB3Q5IW0UTsYpgRmWNQHRbJpPX46X09NCcHtYDgycvYNeC1zrTv56HZTPjLS"
+    }
+  },
+  "listScope": {
+    "accountId": "synthetic-account",
+    "userId": "synthetic-user",
+    "listId": "507f1f77bcf86cd799439011",
+    "keyId": "507f1f77bcf86cd799439012"
+  },
+  "listKey": "__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA",
+  "listEnvelope": {
+    "version": 1,
+    "algorithm": "AES-256-GCM",
+    "aad": "WyJteWxpc3Rlci1saXN0LWtleS13cmFwLXYxIiwxLCJzeW50aGV0aWMtYWNjb3VudCIsInN5bnRoZXRpYy11c2VyIiwiNTA3ZjFmNzdiY2Y4NmNkNzk5NDM5MDExIiwiNTA3ZjFmNzdiY2Y4NmNkNzk5NDM5MDEyIl0",
+    "iv": "MTExMTExMTExMTEx",
+    "ciphertext": "2IHVflwh_tQn34O0CcNH7gdmMZZ8sP_DCpChT45ruEvNp4tdJFTZthfUwvXVi7Pt"
+  },
+  "listNonces": [
+    "MTExMTExMTExMTEx"
+  ],
+  "fields": [
+    {
+      "name": "schema-v2",
+      "scope": {
+        "accountId": "synthetic-account",
+        "userId": "synthetic-user",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "environment": "interop-ä.example.invalid",
+        "collection": "items",
+        "recordId": "507f191e810c19729de860ea",
+        "path": [
+          "metadata",
+          "caption-😀"
+        ],
+        "schemaVersion": 2
+      },
+      "generation": "0123456789abcdef0123456789abcdef",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "text": "Grüße 😀\nBrowser ↔ Node",
+      "envelope": {
+        "v": 1,
+        "generation": "0123456789abcdef0123456789abcdef",
+        "bytes": 29,
+        "chunks": [
+          "MTExMTExMTExMTExqXy2A2ra4xmgpR8GQSnfUGrIPdn8-k3nITEFgYx3_X-ZPTIAywCqkm8lmnDGuCcQgoQ5mx-o"
+        ]
+      },
+      "envelopeSha256": "b733a3a9347bfdcc556ad229c4d7a7a386ff42c9a680be5ef4c8994d96d5854a",
+      "chunks": 1,
+      "bytes": 29
+    },
+    {
+      "name": "schema-v3",
+      "scope": {
+        "accountId": "synthetic-account",
+        "userId": "synthetic-user",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "environment": "interop-ä.example.invalid",
+        "collection": "items",
+        "recordId": "507f191e810c19729de860ea",
+        "path": [
+          "metadata",
+          "caption-😀"
+        ],
+        "schemaVersion": 3
+      },
+      "generation": "0123456789abcdef0123456789abcdef",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "text": "Grüße 😀\nBrowser ↔ Node",
+      "envelope": {
+        "v": 1,
+        "generation": "0123456789abcdef0123456789abcdef",
+        "bytes": 29,
+        "chunks": [
+          "MTExMTExMTExMTExqXy2A2ra4xmgpR8GQSnfUGrIPdn8-k3nITEFgYx3_X-ZPTIAywCHnGi9YpeU6d2imwr4yc5r"
+        ]
+      },
+      "envelopeSha256": "869ff6f4b8cb4312b1d5ec2901d97c0f71762611e05a03129acb3b187af38992",
+      "chunks": 1,
+      "bytes": 29
+    },
+    {
+      "name": "default-v3",
+      "scope": {
+        "accountId": "synthetic-account",
+        "userId": "synthetic-user",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "environment": "interop-ä.example.invalid",
+        "collection": "items",
+        "recordId": "507f191e810c19729de860ea",
+        "path": [
+          "metadata",
+          "caption-😀"
+        ]
+      },
+      "generation": "0123456789abcdef0123456789abcdef",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "text": "Grüße 😀\nBrowser ↔ Node",
+      "envelope": {
+        "v": 1,
+        "generation": "0123456789abcdef0123456789abcdef",
+        "bytes": 29,
+        "chunks": [
+          "MTExMTExMTExMTExqXy2A2ra4xmgpR8GQSnfUGrIPdn8-k3nITEFgYx3_X-ZPTIAywCHnGi9YpeU6d2imwr4yc5r"
+        ]
+      },
+      "envelopeSha256": "869ff6f4b8cb4312b1d5ec2901d97c0f71762611e05a03129acb3b187af38992",
+      "chunks": 1,
+      "bytes": 29
+    },
+    {
+      "name": "empty-v3",
+      "scope": {
+        "accountId": "synthetic-account",
+        "userId": "synthetic-user",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "environment": "interop-ä.example.invalid",
+        "collection": "items",
+        "recordId": "507f191e810c19729de860ea",
+        "path": [
+          "metadata",
+          "caption-😀"
+        ],
+        "schemaVersion": 3
+      },
+      "generation": "0123456789abcdef0123456789abcdef",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "text": "",
+      "envelope": {
+        "v": 1,
+        "generation": "0123456789abcdef0123456789abcdef",
+        "bytes": 0,
+        "chunks": [
+          "MTExMTExMTExMTExqXzGLFBmBOhAjgLLdE_emU8kws61_zkj"
+        ]
+      },
+      "envelopeSha256": "ab38e8d3b57bbc53b6849c15389d6eda11ff33d590b4ec05852b8501ce9e0ae1",
+      "chunks": 1,
+      "bytes": 0
+    },
+    {
+      "name": "chunked-v3",
+      "scope": {
+        "accountId": "synthetic-account",
+        "userId": "synthetic-user",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "environment": "interop-ä.example.invalid",
+        "collection": "items",
+        "recordId": "507f191e810c19729de860ea",
+        "path": [
+          "metadata",
+          "caption-😀"
+        ],
+        "schemaVersion": 3
+      },
+      "generation": "0123456789abcdef0123456789abcdef",
+      "nonces": [
+        "MTExMTExMTExMTEx",
+        "MjIyMjIyMjIyMjIy"
+      ],
+      "syntheticByteLength": 700000,
+      "envelopeSha256": "b2a588d7b243e11f89afa5d6e2447ebe0672f0ebab780dc35922beda54b85f65",
+      "chunks": 2,
+      "bytes": 933336
+    }
+  ],
+  "media": [
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "list_cover",
+        "stableId": "synthetic-list_cover"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "74158f3d54e18f98ec3fd0119e0d042673e97685883d94731605b5f168ab0868",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25XJEPF8X0tjXgtdPVxMk9OI",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "item_image",
+        "stableId": "synthetic-item_image",
+        "itemId": "synthetic-item"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "94fa862650842666eea16766b3591529c16283c1da06aa8d6e8a876bae43dcad",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25YPCjf9v4fDsi2omzgHVx-c",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "item_voice",
+        "stableId": "synthetic-item_voice",
+        "itemId": "synthetic-item"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "f767792020a60ac211beefd0841bb6d0cbac88a20b6a80e65cb87e9d11554209",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25Rj1SHx1axOmeoI-Fi3BHmo",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "note_image",
+        "stableId": "synthetic-note_image",
+        "itemId": "synthetic-item",
+        "noteId": "synthetic-note"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "a401be3a5597323839f4f88cd383f78dba9e8a5420e3bb521a633f869f2aaf89",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25U5_1qyc9mBGyXlNGVwaflk",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "note_voice",
+        "stableId": "synthetic-note_voice",
+        "itemId": "synthetic-item",
+        "noteId": "synthetic-note"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "064e8d1d441ba946deab554b27e6b745f2ff41be846d9a019af194e7c0da1a55",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25cvXdPb5xnPNUuOj_YFaqsE",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "item_attachment",
+        "stableId": "synthetic-item_attachment",
+        "itemId": "synthetic-item"
+      },
+      "byteLength": 1048641,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx",
+        "MjIyMjIyMjIyMjIy"
+      ],
+      "blobSha256": "4770de5364ecf5447e8a0e2db65b2cb0655f0fcaaa6df6ebfd9a84f39b31d535",
+      "framedByteLength": 1048810
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "note_attachment",
+        "stableId": "synthetic-note_attachment",
+        "itemId": "synthetic-item",
+        "noteId": "synthetic-note"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "9cd1b56a20a9e4aadfdfe84031be7384745df73363f0aefb35298c63e0b28446",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25aSJ-nA1vhRAVUk5he1-pqE",
+      "framedByteLength": 161
+    },
+    {
+      "scope": {
+        "ownerAccountId": "synthetic-account",
+        "ownerUserId": "synthetic-user",
+        "environment": "interop-ä.example.invalid",
+        "listId": "507f1f77bcf86cd799439011",
+        "keyId": "507f1f77bcf86cd799439012",
+        "target": "comment_attachment",
+        "stableId": "synthetic-comment_attachment",
+        "itemId": "synthetic-item",
+        "noteId": "synthetic-note",
+        "commentId": "synthetic-comment"
+      },
+      "byteLength": 29,
+      "name": "Grüße-😀.bin",
+      "contentType": "application/octet-stream",
+      "nonces": [
+        "MTExMTExMTExMTEx"
+      ],
+      "blobSha256": "4fd96a68caabefc607d9426efd63b210b09ac92ab37b19e5dfbc303168e45ca6",
+      "blob": "TUxNAQAAAAEAAAAdMTExMTExMTExMTExAAAAhdHgxXgrRHLLZsC2K9wvhkVx5_oJmZ7nDYI-s9PzeOLD8VSL-epVBPaliX41owve6wHu1-O6nmOp_kLXvgOpMa3v4Q7t1796MfPbfI7Lo5Sca_YC_Gnjn5gyqy7kADEIjAwcPjMuSrQhzk43U8KjslkIZX-25ThCz5UCRCxmRdJ7WkEFL6o",
+      "framedByteLength": 161
+    }
+  ]
+}

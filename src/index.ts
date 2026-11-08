@@ -14,16 +14,21 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import fetch, { FormData, fileFrom } from 'node-fetch';
+import nodeFetch, { FormData, fileFrom } from 'node-fetch';
+import { configuredApiKey, configuredBaseUrl, environmentFor, initialConfiguration, saveEnvironment, trustedBaseUrl, validateBaseUrl } from './configuration.js';
+import type { ApiEnvironment } from './configuration.js';
+import { createSkillFetch } from './encrypted-client.js';
+import { loadIdentity, loadOrCreateIdentity } from './identity.js';
+
+const fetch = createSkillFetch(nodeFetch);
+const initial = initialConfiguration();
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const CONFIG = {
-  baseUrl: process.env.LISTER_BASE_URL || 'https://api.mylister.dev',
-  apiKey: process.env.LISTER_API_KEY || '',
+  baseUrl: initial.baseUrl,
+  apiKey: initial.apiKey,
   defaultListName: 'Quick Takes',
 };
-
-type ApiEnvironment = 'production' | 'staging' | 'custom';
 
 type ContactDirectory = Record<string, string>;
 
@@ -46,7 +51,7 @@ type Intent = 'add_item' | 'get_items' | 'get_priority' | 'mark_done' |
               'export_item' | 'email_item' | 'reorder_notes' |
               'upload_attachment' | 'delete_attachment' | 'delete_item_image' |
               'upload_image' | 'upload_voice' | 'file_url' | 'api_health' | 'api_version' |
-              'set_api_environment' | 'set_api_key' |
+              'set_api_environment' | 'set_api_key' | 'setup_encryption' | 'connection_status' |
               'unknown';
 
 interface ParsedIntent {
@@ -109,6 +114,7 @@ interface ParsedApiResponse {
   status: number;
   data: any;
   error?: string;
+  nextCursor?: string | null;
 }
 
 interface CandidateRecipient {
@@ -234,12 +240,31 @@ async function resolveRecipientInput(
 
   const normalizedRecipient = normalizeContactValue(recipient);
   if (!normalizedRecipient) return {};
+  if (['me', 'myself', 'my email'].includes(normalizedRecipient)) return {};
   if (isEmailAddress(normalizedRecipient)) {
     return { toEmail: normalizedRecipient };
   }
 
   const aliasEmail = resolveAliasRecipient(normalizedRecipient);
   if (aliasEmail) return { toEmail: aliasEmail };
+
+  const contacts = await client.findContacts(normalizedRecipient);
+  if (!contacts.success) {
+    return { error: '❌ I could not safely read the contact directory. Check encrypted access or use a full email address.' };
+  }
+  if (Array.isArray(contacts.data) && contacts.data.length) {
+    const matches = contacts.data.filter((contact: any) => typeof contact.email === 'string' && isEmailAddress(contact.email));
+    const exact = matches.filter((contact: any) => [contact.name, contact.initials, contact.companyName, contact.email]
+      .some((value: unknown) => typeof value === 'string' && normalizeContactValue(value) === normalizedRecipient));
+    const selected = exact.length ? exact : matches;
+    if (!selected.length) {
+      return { error: `❌ "${recipient}" has no usable contact email. Specify an email address.` };
+    }
+    if (selected.length !== 1) {
+      return { error: `❌ "${recipient}" matches multiple contacts. Specify the full name or email address.` };
+    }
+    return { toEmail: normalizeContactValue(selected[0].email) };
+  }
 
   const listsResponse = await client.getLists();
   if (!listsResponse.success || !Array.isArray(listsResponse.data)) {
@@ -254,6 +279,9 @@ async function resolveRecipientInput(
 
   const recipientsByEmail = new Map<string, CandidateRecipient>();
   const userResults = await Promise.all(listIds.map((listId) => client.getListUsers(listId)));
+  if (userResults.some(result => !result.success || !Array.isArray(result.data))) {
+    return { error: '❌ The user directory is incomplete, so I cannot safely choose this recipient. Use a full email address.' };
+  }
   for (const userResult of userResults) {
     if (!userResult.success || !Array.isArray(userResult.data)) continue;
 
@@ -342,19 +370,11 @@ function normalizeListName(value?: string): string | undefined {
 }
 
 function normalizeBaseUrl(value: string): string {
-  return value.replace(/\/+$/, '');
+  return validateBaseUrl(value);
 }
 
-const DEFAULT_PRODUCTION_BASE_URL = normalizeBaseUrl(process.env.LISTER_PRODUCTION_BASE_URL || 'https://api.mylister.dev');
-const DEFAULT_STAGING_BASE_URL = process.env.LISTER_STAGING_BASE_URL || process.env.LISTER_STAGING_URL;
-const DEFAULT_PRODUCTION_API_KEY = process.env.LISTER_PRODUCTION_API_KEY || process.env.LISTER_API_KEY || '';
-const DEFAULT_STAGING_API_KEY = process.env.LISTER_STAGING_API_KEY || process.env.LISTER_API_KEY || '';
-
 function resolveRuntimeApiEnvironment(baseUrl: string): ApiEnvironment {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (DEFAULT_STAGING_BASE_URL && normalized === normalizeBaseUrl(DEFAULT_STAGING_BASE_URL)) return 'staging';
-  if (normalized === DEFAULT_PRODUCTION_BASE_URL) return 'production';
-  return 'custom';
+  return environmentFor(baseUrl);
 }
 
 function parseApiEnvironmentValue(value: string): ApiEnvironment | undefined {
@@ -445,20 +465,14 @@ function parseProjectData(input: string): ParsedIntent['entities']['project'] {
 }
 
 function parseApiEnvironmentIntent(input: string, lower: string): { apiEnvironment?: ApiEnvironment; apiBaseUrl?: string } | undefined {
-  const explicitUrlMatch = input.match(/\b(?:use|switch|set|change)\b[^\n.]*\b(?:api\s+)?(?:base\s*url|endpoint|environment|env)\b[^\n.]*\b(?:to|at|is|=)\s+(https?:\/\/[^\s"'`]+)\b/i);
+  const explicitUrlMatch = input.trim().match(/^(?:use|switch|set|change)\s+(?:(?:the\s+)?api\s+)?(?:base\s*url|endpoint|environment|env)\s+(?:(?:to|at|is|=)\s+)?(https?:\/\/[^\s"'`]+)\s*$/i);
   if (explicitUrlMatch?.[1]) {
     return { apiBaseUrl: explicitUrlMatch[1] };
   }
 
-  const explicitEnvironmentMatch = input.match(/\b(?:use|switch|set|change)\b[^\n.]*\b(?:api\s+)?(?:environment|env|base\s*url|endpoint)?[^\n.]*\b(?:to|for)\s+(production|staging|prod|stage|stg)\b/i);
+  const explicitEnvironmentMatch = input.trim().match(/^(?:use|switch|set|change)\s+(?:(?:the\s+)?(?:api\s+)?(?:environment|env|endpoint)\s+)?(?:(?:to|for)\s+)?(production|staging|prod|stage|stg)\s*[.!]?$/i);
   if (explicitEnvironmentMatch?.[1]) {
     const parsedEnv = parseApiEnvironmentValue(explicitEnvironmentMatch[1]);
-    if (parsedEnv) return { apiEnvironment: parsedEnv };
-  }
-
-  if (/\b(?:use|switch|set|change)\b/i.test(lower) && /\b(staging|production|prod|stage|stg)\b/i.test(lower)) {
-    const fallbackMatch = lower.match(/\b(staging|production|prod|stage|stg)\b/i);
-    const parsedEnv = parseApiEnvironmentValue(fallbackMatch?.[1] ?? '');
     if (parsedEnv) return { apiEnvironment: parsedEnv };
   }
 
@@ -466,7 +480,7 @@ function parseApiEnvironmentIntent(input: string, lower: string): { apiEnvironme
 }
 
 function parseApiKeyIntent(input: string, lower: string): { apiEnvironment?: ApiEnvironment; apiKey?: string } | undefined {
-  const apiKeyMatch = input.match(/\b(?:set|use|change|update|store)\b[^\n.]*\b(?:api\s+)?key\b[^\n.]*?(?:\s+(?:to|is|:|=)\s+)(?:"([^"]+)"|'([^']+)'|([^\s"'`]+))/i);
+  const apiKeyMatch = input.trim().match(/^(?:set|use|change|update|store)\s+(?:(?:staging|production|prod|stage|stg)\s+)?(?:api\s+)?key\s+(?:to|is|:|=)\s+(?:"([^"]+)"|'([^']+)'|([^\s"'`]+))\s*$/i);
   if (!apiKeyMatch) return undefined;
 
   const rawApiKey = apiKeyMatch[1] ?? apiKeyMatch[2] ?? apiKeyMatch[3];
@@ -480,6 +494,12 @@ function parseApiKeyIntent(input: string, lower: string): { apiEnvironment?: Api
 // ─── Intent Parser ───────────────────────────────────────────────────────────
 export function parseIntent(input: string): ParsedIntent {
   const lower = input.toLowerCase();
+  if (/^(?:setup|set up)(?:\s+(?:skill|encryption|encrypted access))?\s*$/i.test(input.trim())) {
+    return { intent: 'setup_encryption', entities: {} };
+  }
+  if (/^(?:(?:show|check|get)\s+)?(?:connection|skill|api)\s+status\s*$/i.test(input.trim())) {
+    return { intent: 'connection_status', entities: {} };
+  }
 
   // Extract quoted text
   const itemText = extractQuotedText(input);
@@ -899,7 +919,8 @@ class ListerClient {
     const data = Array.isArray(raw) ? raw : (raw?.data ?? raw);
     const detail = raw?.detail ?? raw?.message ?? raw?.error ?? res.statusText;
     const error = typeof detail === 'string' ? detail : JSON.stringify(detail);
-    return { ok: res.ok, status: res.status, data, error };
+    return { ok: res.ok && raw !== null && raw?.success !== false, status: res.status, data, error,
+      nextCursor: typeof raw?.nextCursor === 'string' ? raw.nextCursor : null };
   }
 
   async getLists(options?: { includeArchived?: boolean }): Promise<ListerResponse> {
@@ -1086,10 +1107,10 @@ class ListerClient {
         const contentType = res.headers.get('content-type') ?? '';
         if (contentType.includes('text/html')) {
           const html = await res.text();
-          return { success: true, message: `Item exported as HTML (${html.length} bytes)`, data: { format: 'html', size: html.length } };
+          return { success: true, message: `Item exported as HTML (${Buffer.byteLength(html)} bytes)`, data: { format: 'html', size: Buffer.byteLength(html), html } };
         }
-        const { data } = await this.parseResponse(res);
-        return { success: true, message: 'Item exported as JSON', data };
+        const { ok, data, error } = await this.parseResponse(res);
+        return { success: ok, message: ok ? 'Item exported as JSON' : `Failed: ${error}`, data };
       }
       const { data, error } = await this.parseResponse(res);
       return { success: false, message: `Failed: ${error}`, data };
@@ -1106,7 +1127,7 @@ class ListerClient {
         body: JSON.stringify({ toEmail: options.toEmail, theme: options.theme }),
       });
       const { ok, data, error } = await this.parseResponse(res);
-      return { success: ok, message: ok ? 'Item emailed successfully' : `Failed: ${error}`, data };
+      return { success: ok, message: ok ? 'Item email request accepted' : `Failed: ${error}`, data };
     } catch (err) {
       return { success: false, message: `Error emailing item: ${err}` };
     }
@@ -1273,10 +1294,10 @@ class ListerClient {
         const contentType = res.headers.get('content-type');
         if (contentType?.includes('text/html')) {
           const html = await res.text();
-          return { success: true, message: `List exported as HTML (${html.length} bytes)`, data: { format: 'html', size: html.length } };
+          return { success: true, message: `List exported as HTML (${Buffer.byteLength(html)} bytes)`, data: { format: 'html', size: Buffer.byteLength(html), html } };
         }
-        const { data } = await this.parseResponse(res);
-        return { success: true, message: `List exported as JSON`, data };
+        const { ok, data, error } = await this.parseResponse(res);
+        return { success: ok, message: ok ? 'List exported as JSON' : `Failed: ${error}`, data };
       }
       const { data, error } = await this.parseResponse(res);
       return { success: false, message: `Failed: ${error}`, data };
@@ -1301,10 +1322,10 @@ class ListerClient {
         const contentType = res.headers.get('content-type');
         if (contentType?.includes('text/html')) {
           const html = await res.text();
-          return { success: true, message: `Priority items exported as HTML (${html.length} bytes)`, data: { format: 'html', size: html.length } };
+          return { success: true, message: `Priority items exported as HTML (${Buffer.byteLength(html)} bytes)`, data: { format: 'html', size: Buffer.byteLength(html), html } };
         }
-        const { data } = await this.parseResponse(res);
-        return { success: true, message: `Priority items exported as JSON`, data };
+        const { ok, data, error } = await this.parseResponse(res);
+        return { success: ok, message: ok ? 'Priority items exported as JSON' : `Failed: ${error}`, data };
       }
       const { data, error } = await this.parseResponse(res);
       return { success: false, message: `Failed: ${error}`, data };
@@ -1325,7 +1346,7 @@ class ListerClient {
         }),
       });
       const { ok, data, error } = await this.parseResponse(res);
-      return { success: ok, message: ok ? 'List emailed successfully' : `Failed: ${error}`, data };
+      return { success: ok, message: ok ? 'List email accepted for delivery' : `Failed: ${error}`, data };
     } catch (err) {
       return { success: false, message: `Error emailing list: ${err}` };
     }
@@ -1343,7 +1364,7 @@ class ListerClient {
         }),
       });
       const { ok, data, error } = await this.parseResponse(res);
-      return { success: ok, message: ok ? 'Priority items emailed successfully' : `Failed: ${error}`, data };
+      return { success: ok, message: ok ? 'Priority items email accepted for delivery' : `Failed: ${error}`, data };
     } catch (err) {
       return { success: false, message: `Error emailing priority items: ${err}` };
     }
@@ -1419,6 +1440,31 @@ class ListerClient {
       return { success: ok, message: ok ? `Found ${users.length} users` : `Failed: ${error}`, data: users };
     } catch (err) {
       return { success: false, message: `Error fetching list users: ${err}` };
+    }
+  }
+
+  async findContacts(query: string): Promise<ListerResponse> {
+    const contacts: any[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+    try {
+      for (let page = 0; page < 100; page++) {
+        const params = new URLSearchParams({ q: query, limit: '100' });
+        if (cursor) params.set('cursor', cursor);
+        const response = await fetch(`${this.baseUrl}/v1/contacts?${params}`, { headers: this.getAuthHeader() });
+        if (response.status === 404 && page === 0) return { success: true, message: 'Contacts unavailable on this legacy API', data: null };
+        const parsed = await this.parseResponse(response);
+        if (!parsed.ok || !Array.isArray(parsed.data)) return { success: false, message: 'Contact lookup failed' };
+        contacts.push(...parsed.data);
+        const next = parsed.nextCursor;
+        if (!next) return { success: true, message: 'Contacts resolved', data: contacts };
+        if (typeof next !== 'string' || cursors.has(next)) return { success: false, message: 'Invalid contact pagination' };
+        cursors.add(next);
+        cursor = next;
+      }
+      return { success: false, message: 'Contact directory exceeds the lookup limit' };
+    } catch {
+      return { success: false, message: 'Contact lookup failed' };
     }
   }
 
@@ -1625,7 +1671,7 @@ class ListerClient {
 
   async getFileUrl(fileKey: string, expiresIn = 3600): Promise<ListerResponse> {
     try {
-      const res = await fetch(this.fileUrl(fileKey, `?expires_in=${expiresIn}`), {
+      const res = await fetch(this.fileUrl(fileKey, `/url?expires_in=${expiresIn}`), {
         headers: this.getAuthHeader(),
       });
       const { ok, data, error } = await this.parseResponse(res);
@@ -1714,67 +1760,102 @@ async function resolveList(listName: string, includeArchived: boolean = false): 
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
 let runtimeBaseUrl = normalizeBaseUrl(CONFIG.baseUrl);
-const runtimeApiKeys: Record<ApiEnvironment, string> = {
-  production: DEFAULT_PRODUCTION_API_KEY,
-  staging: DEFAULT_STAGING_API_KEY,
-  custom: CONFIG.apiKey,
-};
 let runtimeApiEnvironment = resolveRuntimeApiEnvironment(runtimeBaseUrl);
-let runtimeApiKey = runtimeApiKeys[runtimeApiEnvironment];
+let runtimeApiKey = configuredApiKey(runtimeBaseUrl);
 let client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
 
 function getConfiguredApiBaseUrl(targetEnvironment: ApiEnvironment): string | undefined {
-  if (targetEnvironment === 'production') return DEFAULT_PRODUCTION_BASE_URL;
-  if (targetEnvironment === 'staging' && DEFAULT_STAGING_BASE_URL) return normalizeBaseUrl(DEFAULT_STAGING_BASE_URL);
-  return undefined;
-}
-
-function getConfiguredApiKey(targetEnvironment: ApiEnvironment): string {
-  return runtimeApiKeys[targetEnvironment];
+  return configuredBaseUrl(targetEnvironment);
 }
 
 function switchApiEnvironment(targetBaseUrl: string, note?: string): string {
-  const normalizedBaseUrl = normalizeBaseUrl(targetBaseUrl);
+  let normalizedBaseUrl: string;
   try {
-    new URL(normalizedBaseUrl);
-  } catch {
-    return `❌ Could not switch API environment because "${targetBaseUrl}" is not a valid URL.`;
+    normalizedBaseUrl = trustedBaseUrl(targetBaseUrl);
+    if (process.env.LISTER_ENVIRONMENT && environmentFor(normalizedBaseUrl) !== process.env.LISTER_ENVIRONMENT.toLowerCase()) {
+      return '❌ LISTER_ENVIRONMENT pins this host to another environment. Change that host setting before switching.';
+    }
+    saveEnvironment(normalizedBaseUrl);
+  } catch (error) {
+    return `❌ Could not switch API environment: ${(error as Error).message}`;
   }
 
   runtimeBaseUrl = normalizedBaseUrl;
   runtimeApiEnvironment = resolveRuntimeApiEnvironment(runtimeBaseUrl);
-  runtimeApiKey = getConfiguredApiKey(runtimeApiEnvironment);
+  runtimeApiKey = configuredApiKey(runtimeBaseUrl);
   client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
   const environment = runtimeApiEnvironment;
   const suffix = note ? ` ${note}` : '';
   if (!runtimeApiKey) {
-    return `✅ API ${environment} environment set to ${environment === 'custom' ? `(${runtimeBaseUrl})` : `(${normalizedBaseUrl})`}${suffix}, but no API key is configured for this environment. Set one with "set ${environment} API key to ...".`;
+    return `✅ API environment saved as ${environment} (${runtimeBaseUrl})${suffix}. Configure ${environment === 'staging' ? 'LISTER_STAGING_API_KEY' : environment === 'production' ? 'LISTER_PRODUCTION_API_KEY' : 'LISTER_API_KEY'} in the host environment before using it.`;
   }
   return `✅ API environment set to ${environment}${environment === 'custom' ? ` (${runtimeBaseUrl})` : ` (${normalizedBaseUrl})`}${suffix}.`;
 }
 
 function setRuntimeApiKey(targetApiKey: string, targetEnvironment?: ApiEnvironment): string {
-  const trimmedApiKey = targetApiKey.trim();
-  if (!trimmedApiKey) {
-    return '❌ Please provide an API key value.';
-  }
-
   const effectiveEnvironment = targetEnvironment ?? runtimeApiEnvironment;
-  runtimeApiKeys[effectiveEnvironment] = trimmedApiKey;
+  const variable = effectiveEnvironment === 'staging' ? 'LISTER_STAGING_API_KEY' : effectiveEnvironment === 'production' ? 'LISTER_PRODUCTION_API_KEY' : 'LISTER_API_KEY';
+  return `❌ Set ${variable} through the host's secret/environment settings. API keys are not accepted in conversation or command arguments. Then run "setup encryption".`;
+}
 
-  if (effectiveEnvironment === runtimeApiEnvironment) {
-    runtimeApiKey = trimmedApiKey;
-    client = new ListerClient(runtimeBaseUrl, runtimeApiKey);
-    return `✅ API key set for the active ${effectiveEnvironment} environment.`;
+async function skillMetadata(path: string, body?: unknown): Promise<any> {
+  if (!runtimeApiKey) throw new Error('Configure an API key in this host environment first.');
+  trustedBaseUrl(runtimeBaseUrl);
+  const response = await nodeFetch(`${runtimeBaseUrl}/v1/skill/${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    redirect: 'error',
+    signal: AbortSignal.timeout(20_000),
+    headers: { 'X-API-Key': runtimeApiKey, 'Accept': 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    size: 1024 * 1024,
+  });
+  if (response.status === 404) throw new Error('This API does not yet support encrypted skill access. Use the current staging API.');
+  if (response.status === 401) throw new Error('The API key is invalid, expired, or revoked. Check this environment\'s API key.');
+  if (!response.ok) throw new Error(`MyLister could not complete skill setup (HTTP ${response.status}).`);
+  if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Unexpected skill setup response.');
+  const result = await response.json() as any;
+  if (result.success !== true || !result.data || typeof result.data !== 'object') throw new Error('Invalid skill setup response.');
+  return result.data;
+}
+
+async function setupEncryption(): Promise<string> {
+  try {
+    if (!runtimeApiKey) throw new Error('Configure an API key in the host secret settings first.');
+    const identity = await loadOrCreateIdentity(runtimeBaseUrl, runtimeApiKey);
+    const result = await skillMetadata('enrollment', { publicKey: identity.publicKey });
+    const context = await skillMetadata('context');
+    if (context.encryption?.status === 'active' && context.encryption.installationId === identity.installationId) {
+      return `✅ Encrypted skill access is active for ${runtimeApiEnvironment}. This installation has your account's existing access.`;
+    }
+    const approvalUrl = result.approvalUrl || context.approvalUrl;
+    const instruction = typeof approvalUrl === 'string' && approvalUrl.startsWith('https://')
+      ? `Open ${approvalUrl}` : 'Open MyLister Settings → API Keys';
+    return `✅ This installation is ready for approval. ${instruction} and approve encrypted access for this API key.\nInstallation fingerprint: ${identity.installationId}\nAccess covers your account with your existing rights. After approval, run "show connection status".`;
+  } catch (error) {
+    return `❌ ${(error as Error).message.replaceAll(runtimeApiKey || '\u0000', '[redacted]')}`;
   }
+}
 
-  return `✅ API key saved for ${effectiveEnvironment}. It will be used when you switch to that environment.`;
+async function connectionStatus(): Promise<string> {
+  try {
+    const context = await skillMetadata('context');
+    const identity = await loadIdentity(runtimeBaseUrl, runtimeApiKey);
+    const encryption = context.encryption || { status: 'none' };
+    const matches = Boolean(identity && identity.installationId === encryption.installationId);
+    return `✅ Environment: ${runtimeApiEnvironment}\nAPI: ${runtimeBaseUrl}\nAccount: ${context.userId}\nAPI key: ${context.apiKeyName || context.apiKeyId}\nEncrypted access: ${encryption.status}${matches ? ' (this installation)' : ''}\n${encryption.status === 'active' && matches ? 'Access: all account content, within your existing rights.' : 'Run "setup encryption" on this installation and approve it in API Keys.'}`;
+  } catch (error) {
+    return `❌ ${(error as Error).message.replaceAll(runtimeApiKey || '\u0000', '[redacted]')}`;
+  }
 }
 
 export async function handleCommand(input: string): Promise<string> {
   const parsed = parseIntent(input);
 
   switch (parsed.intent) {
+    case 'setup_encryption':
+      return setupEncryption();
+    case 'connection_status':
+      return connectionStatus();
     case 'add_item': {
       if (!parsed.entities.itemText) {
         return '❌ Please provide what to add (use quotes: "task name")';
@@ -2084,7 +2165,7 @@ export async function handleCommand(input: string): Promise<string> {
 
     case 'set_api_key': {
       if (!parsed.entities.apiKey) {
-        return '❌ Please provide an API key (for example, "set API key to your-key-here").';
+        return '❌ Configure the API key through the host secret settings, then run "setup encryption".';
       }
       return setRuntimeApiKey(parsed.entities.apiKey, parsed.entities.apiEnvironment);
     }
@@ -2332,7 +2413,8 @@ export async function handleCommand(input: string): Promise<string> {
         `• Export my today list as html\n` +
         `• Switch to production (or set staging)\n` +
         `• Search for meeting\n` +
-        `• Set API key to abc123\n` +
+        `• Setup encryption\n` +
+        `• Show connection status\n` +
         `• List summary\n` +
         `• Archive my old project list\n` +
         `• Share my work list with user@example.com as edit\n` +
@@ -2350,7 +2432,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.log('  node dist/index.js get priority items');
     console.log('  node dist/index.js mark item 123 done');
     console.log('  node dist/index.js switch to staging');
-    console.log('  node dist/index.js set API key to your-key-here');
+    console.log('  node dist/index.js setup encryption');
+    console.log('  node dist/index.js show connection status');
     process.exit(1);
   }
 

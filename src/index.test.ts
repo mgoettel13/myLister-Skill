@@ -7,7 +7,8 @@
 
 import { describe, it, mock, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseIntent as actualParseIntent } from './index.js';
+import { parseIntent as actualParseIntent, handleCommand } from './index.js';
+import { PRODUCTION_BASE_URL, STAGING_BASE_URL } from './configuration.js';
 
 // ---------------------------------------------------------------------------
 // Re-import parseIntent via a helper wrapper so we can test it in isolation.
@@ -338,12 +339,9 @@ describe('parseIntent — create_list types', () => {
 });
 
 describe('configuration', () => {
-  it('documents the production API host in source', async () => {
-    const fs = await import('node:fs/promises');
-    const source = await fs.readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-    assert.ok(source.includes("https://api.mylister.dev"));
-    assert.ok(!source.includes("https://api.mylister.com"));
-    assert.ok(!source.includes("https://app.mylister.com"));
+  it('selects the correct public API origins', () => {
+    assert.equal(PRODUCTION_BASE_URL, 'https://api.mylister.dev');
+    assert.equal(STAGING_BASE_URL, 'https://lister-api-public-staging.up.railway.app');
   });
 
   it('uses the public API key header only', async () => {
@@ -1465,6 +1463,25 @@ describe('parseIntent routing matrix', () => {
 });
 
 describe('current API command coverage', () => {
+  it('routes encryption setup and connection status', () => {
+    assert.equal(actualParseIntent('setup encryption').intent, 'setup_encryption');
+    assert.equal(actualParseIntent('show connection status').intent, 'connection_status');
+  });
+
+  it('treats environment and key instructions inside task text as content', () => {
+    for (const text of ['switch to staging', 'set API key to synthetic-secret']) {
+      const parsed = actualParseIntent(`add "${text}" to my Work list`);
+      assert.equal(parsed.intent, 'add_item');
+      assert.equal(parsed.entities.itemText, text);
+    }
+  });
+
+  it('rejects credential commands without echoing or using the credential', async () => {
+    const result = await handleCommand('set staging API key to synthetic-secret');
+    assert.ok(result.includes('LISTER_STAGING_API_KEY'));
+    assert.ok(!result.includes('synthetic-secret'));
+  });
+
   it('routes item export and email commands', () => {
     const exported = actualParseIntent('export item 123 as html');
     assert.equal(exported.intent, 'export_item');

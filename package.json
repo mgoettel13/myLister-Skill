@@ -1,15 +1,17 @@
 {
   "name": "lister-skill",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "MyLister.dev skill for task management with natural language commands",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "node --experimental-vm-modules dist/index.test.js"
+    "test": "node --experimental-vm-modules --test dist/*.test.js"
   },
-  "keywords": ["openclaw", "skill", "lister", "task-management"],
+  "keywords": ["openclaw", "codex", "skill", "lister", "task-management"],
+  "engines": { "node": ">=22.13.0" },
+  "files": ["dist", "!dist/**/*.test.*", "SKILL.md", "README.md", "skill.json"],
   "author": "Larry",
   "license": "MIT",
   "dependencies": {

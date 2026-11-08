@@ -1,154 +1,97 @@
-# MyLister.dev Skill
+# MyLister skill
 
-Agent skill for natural language control of [MyLister.dev](https://app.mylister.dev) task management.
+One generic API client and skill for Dot, OpenClaw, Codex, and other hosts supporting SKILL.md. It manages MyLister content and encrypts/decrypts on the computer running the skill.
 
-## Setup
+## Install
 
-```bash
-# Install dependencies
-npm install
+Requires Node.js 22.13 or later.
 
-# Build
-npm run build
-
-# Set environment variables
-export LISTER_BASE_URL="https://api.mylister.dev"
-export LISTER_PRODUCTION_BASE_URL="https://api.mylister.dev"
-export LISTER_STAGING_BASE_URL="https://staging-api.mylister.dev"
-export LISTER_API_KEY="your-api-key-here"
-export LISTER_PRODUCTION_API_KEY="your-production-key"
-export LISTER_STAGING_API_KEY="your-staging-key"
-export LISTER_CONTACTS='{"Sarah":"sarah@example.com","mom":"mom@example.com"}'
-```
-
-The API key is read from the environment and sent as `X-API-Key`. Never commit an API key to this repository or place it in a prompt. On Windows PowerShell, use:
-
-Get your key in [MyLister.dev Settings](https://app.mylister.dev/settings) under the **API Key** tab.
-
-```powershell
-$env:LISTER_BASE_URL = "https://api.mylister.dev"
-$env:LISTER_PRODUCTION_BASE_URL = "https://api.mylister.dev"
-$env:LISTER_STAGING_BASE_URL = "https://staging-api.mylister.dev"
-$env:LISTER_API_KEY = "your-api-key-here"
-$env:LISTER_PRODUCTION_API_KEY = "your-production-key"
-$env:LISTER_STAGING_API_KEY = "your-staging-key"
-$env:LISTER_CONTACTS = '{"Sarah":"sarah@example.com","mom":"mom@example.com"}'
-```
-
-## Install In Agent Hosts
-
-This repository is an [Agent Skills-compatible](https://agentskills.io/) skill. The root `SKILL.md` contains the agent instructions, while the TypeScript client in `dist/` performs the API calls. Because `dist/` is built locally and is not committed, use the clone/build flow below for this repository.
-
-### OpenClaw
-
-Install the built skill into the shared OpenClaw skills directory:
-
-```bash
-git clone https://github.com/mgoettel13/MyLister-Skill.git /tmp/MyLister-Skill
-cd /tmp/MyLister-Skill
-npm ci
-openclaw skills install . --as lister --global
-```
-
-For a workspace-only install, omit `--global`. Start a new OpenClaw session, then ask naturally, for example: `Add "Call Mama" to my today list`.
-
-OpenClaw also supports `openclaw skills install git:mgoettel13/MyLister-Skill@main`, but a direct Git skill install does not run this repository's build step. Build first, then install the local directory as shown above. See the [OpenClaw skills documentation](https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md).
-
-### Hermes
-
-Hermes keeps installed skills in `~/.hermes/skills/`. Clone and build the skill there:
-
-```bash
-git clone https://github.com/mgoettel13/MyLister-Skill.git ~/.hermes/skills/lister
-cd ~/.hermes/skills/lister
-npm ci
-hermes skills list
-```
-
-Start a new Hermes session and use `/lister` or describe the task normally. Hermes can also install a standalone `SKILL.md` URL with `hermes skills install`, but the clone/build flow is required here so the Node API client is available. See the [Hermes skills guide](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills) and [CLI reference](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/cli-commands.md).
-
-### Codex
-
-For the current repository, install it as a **standalone Codex skill**:
-
-```bash
-git clone https://github.com/mgoettel13/MyLister-Skill.git "$CODEX_HOME/skills/lister"
-cd "$CODEX_HOME/skills/lister"
+```sh
+git clone https://github.com/mgoettel13/MyLister-Skill.git
+cd MyLister-Skill
 npm ci
 ```
 
-If `CODEX_HOME` is not set, use the Codex skills directory shown by your installation, commonly `~/.codex/skills/lister`. Restart Codex or start a new session, set `LISTER_API_KEY` in the environment, and ask for a MyLister action. Codex can then load the root `SKILL.md` and run the bundled CLI.
+The prepare script builds the client. Install this complete folder in your host's configured skills directory. Copying SKILL.md alone does not install the executable. For OpenClaw, use the skills directory configured for that instance. Dot uses local skills through its connected computer, which must be online with the ChatGPT app running. See [official Dot documentation](https://learn.chatgpt.com/docs/dots).
 
-### Claude Code
+## Staging setup
 
-Claude Code supports project skills in `.claude/skills/` and personal skills in `~/.claude/skills/`. Install it for all projects with:
+1. Create a separate API key for this installation in MyLister Settings > API Keys.
+2. Set LISTER_STAGING_API_KEY through the host's secret/environment settings. Keep keys out of chat, command arguments, and this repository.
+3. Run:
 
-```bash
-git clone https://github.com/mgoettel13/MyLister-Skill.git ~/.claude/skills/lister
-cd ~/.claude/skills/lister
-npm ci
+```sh
+node dist/index.js switch to staging
+node dist/index.js setup encryption
 ```
 
-Or clone it into `<your-project>/.claude/skills/lister` for that project only. Start Claude Code from the relevant project and ask naturally, or invoke `/lister`. See the [Claude Code skills documentation](https://code.claude.com/docs/en/slash-commands).
+4. Open the returned MyLister approval link, compare the installation fingerprint, and approve encrypted access with your passkey.
+5. Check:
 
-## Usage
+```sh
+node dist/index.js show connection status
+node dist/index.js get my lists
+```
 
-### CLI
-```bash
-node dist/index.js add "call Notary" to my today list
+Encrypted setup requires the matching MyLister API release. Staging API: https://lister-api-public-staging.up.railway.app. Staging app: https://listerbeta.up.railway.app.
+
+The installation inherits all account content access, including future content. Existing shared-list read/edit permissions remain enforced. Give Dot and OpenClaw separate API keys so either can be revoked independently.
+
+## Encryption and storage
+
+Setup generates a P-256 key pair. The private key is encrypted locally with an API-key-derived key and bound to the API origin. MyLister receives the public key and, after approval, stores an account-key envelope encrypted for this installation. The client opens it locally and uses the browser-compatible list-key/content formats.
+
+New lists include an owner account-key envelope, making them readable by the app and other authorized installations. Keys are used in memory. The agent receives the readable content needed for the request; keys never need to enter the conversation.
+
+This reuses MyLister's existing account root and recovery model, including its server-assisted recovery. It does not replace account recovery or make a new claim that the server can never recover the root.
+
+Private configuration defaults to %LOCALAPPDATA%\MyListerSkill on Windows, or ${XDG_CONFIG_HOME:-~/.config}/mylister-skill on Linux/macOS. LISTER_CONFIG_DIR can override it. Revoking the API key blocks future API access. A key alone on another host is not a replacement for the enrolled local identity; run setup with a separate key.
+
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| LISTER_STAGING_API_KEY | Staging credential |
+| LISTER_PRODUCTION_API_KEY | Separate production credential |
+| LISTER_ENVIRONMENT | Optional explicit host pin: staging, production, custom |
+| LISTER_STAGING_BASE_URL | Trusted staging origin override |
+| LISTER_PRODUCTION_BASE_URL | Trusted production origin override |
+| LISTER_BASE_URL | Trusted custom origin or legacy default |
+| LISTER_API_KEY | Legacy key bound to LISTER_BASE_URL, or production |
+| LISTER_CONFIG_DIR | Settings and encrypted identity location |
+| LISTER_CONTACTS | Optional JSON name-to-email aliases |
+
+Selected environments persist across separate CLI calls. An explicit LISTER_ENVIRONMENT pins the host and overrides saved selection. Production defaults to https://api.mylister.dev. Staging never inherits a production key. Custom origins must be configured explicitly. Requests require HTTPS and do not follow redirects.
+
+## Use
+
+```sh
+node dist/index.js add "Call Mama" to my Today list
+node dist/index.js create notebook list Journal
+node dist/index.js create project list Launch
 node dist/index.js get priority items
-node dist/index.js mark item 123 done
-node dist/index.js remove item 456
-node dist/index.js update item 789 to "new title"
+node dist/index.js search for meeting
+node dist/index.js mark item 0123456789abcdef01234567 done
+node dist/index.js email my Shopping list to Sarah
 ```
 
-### As Module
-```typescript
+Send and email are aliases. "To me" uses the current account. Named recipients use actual contact information or configured aliases; ambiguous names are not guessed. Sending a copy is separate from granting shared-list membership. A successful email response means API acceptance, not confirmed delivery.
+
+```ts
 import { handleCommand } from './dist/index.js';
-
-const response = await handleCommand('add "buy groceries" to my today list');
-console.log(response);
+const result = await handleCommand('get priority items');
 ```
 
-## Supported Commands
+Agent hosts can translate natural requests into the parser's syntax. Commands also cover list/item edits and deletion, notes/comments, reminders, ordering, sharing, exports, attachments, and media. Permission and security failures never trigger a plaintext fallback.
 
-| Command | Example |
-|---------|---------|
-| Add item | `add "task" to my [list] list` |
-| Add item with note | `add "task" to my [list] list with note "details"` |
-| Add project item | `add "task" to my project list starts 2026-09-01 due 2026-09-05 for 3 hours assigned to user@example.com` |
-| Get items | `get my [list] list` |
-| Priority items | `get priority items` |
-| Mark done | `mark item [id] done` |
-| Remove item | `remove item [id]` |
-| Update item | `update item [id] to "new text"` |
-| Move item | `move item [id] to my [list] list` |
-| Add note | `note for item [id]: "text"` |
-| Item comments | `comment on item [id]: "text"` |
-| Note comments | `comment on note [note_id] for item [id]: "text"` |
-| Export item | `export item [id] as html` |
-| Email item / list / priority | `email item [id] to Sarah` / `send my work list to Mom` / `send priority items to Alex` |
-| Reorder notes | `reorder notes for item [id] in order: [note_id], [note_id]` |
-| Attach file | `attach file "C:\\docs\\plan.pdf" to item [id]` |
-| Upload media | `upload image "C:\\images\\brief.png" to item [id]` |
-| File URL | `get file URL for [file_key] expires 3600` |
-| API environment | `switch to production` / `switch to staging` |
-| API base URL | `set API base URL to https://api-staging.mylister.dev` |
-| API key | `set API key to abc123` |
-| Reminders | `add "task" to my today list reminder tomorrow at 9am` |
-| Notebook lists | `create a new list called Journal notebook` |
-| Project lists | `create a new project list called Website Launch` |
-| Change list type | `update my Launch list to project` |
-| Move completed | `move completed to bottom of my today list` |
+Current encrypted-client limits: changing an existing list's type, generating legacy file URLs, voice transcription, and voice duration metadata are not supported. Create notebooks/projects with the desired type. Encrypted sharing requires the recipient to accept the key transfer in MyLister. Older media without stable encryption bindings cannot be moved safely. Reads beyond the raw API's pagination ceiling stop with an explicit error rather than returning a partial list. HTML exports use a basic escaped layout rather than the app's full themed presentation.
 
-## API
+## Development
 
-- **API documentation:** [MyLister API docs](https://api.mylister.dev/docs)
-- **Base URL:** `https://api.mylister.dev` (or override with `LISTER_BASE_URL`, `LISTER_PRODUCTION_BASE_URL`, `LISTER_STAGING_BASE_URL`)
-- **Production/staging keys:** Set `LISTER_PRODUCTION_API_KEY` / `LISTER_STAGING_API_KEY` when envs use different credentials.
-- **Auth:** API key via `X-API-Key`
-- **Endpoints:** `/v1/lists`, `/v1/items`, `/v1/items/priority`, item/note comments, item exports, note reorder, attachments, media uploads, file URLs, health, and version
+```sh
+npm ci
+npm test
+npm pack --dry-run
+```
 
-## License
-
-MIT
+Tests use synthetic keys, isolated temporary directories, and mocked HTTP. Do not target a real user's account. This skill is independent of the MyLister OAuth/Codex plugin.
